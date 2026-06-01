@@ -87,7 +87,7 @@ src/
 |-------|-----|----------|
 | `GET` | `/api/v1/roles` | Получить список всех ролей |
 | `POST` | `/api/v1/auth/login` | Аутентификация, получение JWT токена |
-| `GET` | `/swagger-ui.html` | Swagger UI |
+| `GET` | `/swagger-ui/index.html` | Swagger UI |
 | `GET` | `/api-docs` | OpenAPI JSON спецификация |
 
 ### Требуют аутентификации (JWT Bearer Token)
@@ -115,6 +115,14 @@ src/
 - `ROLE_MAIN_COACH`
 
 ---
+
+## Default Admin User
+
+При первом запуске автоматически создаётся администратор:
+
+| Логин | Пароль | Роль |
+|-------|--------|------|
+| `admin` | `admin123` | `ROLE_ADMIN` |
 
 ## Swagger UI
 
