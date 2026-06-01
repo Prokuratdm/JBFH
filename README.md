@@ -121,7 +121,7 @@ src/
 После запуска приложения Swagger UI доступен по адресу:
 
 ```
-http://localhost:8080/swagger-ui.html
+http://localhost:8080/swagger-ui/index.html
 ```
 
 OpenAPI JSON спецификация:
