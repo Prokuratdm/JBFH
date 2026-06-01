@@ -1,5 +1,6 @@
 package com.par.jbfh.auth.controller;
 
+import com.par.jbfh.config.JwtService;
 import com.par.jbfh.auth.service.RoleService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +23,9 @@ class RoleControllerTest {
 
     @MockitoBean
     private RoleService roleService;
+
+    @MockitoBean
+    private JwtService jwtService;
 
     @Test
     void getAllRoles_shouldReturnRoles() throws Exception {
