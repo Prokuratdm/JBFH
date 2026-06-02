@@ -1,5 +1,6 @@
 package com.par.jbfh.auth.service;
 
+import com.par.jbfh.auth.dto.ChangePasswordRequest;
 import com.par.jbfh.auth.dto.CreateUserRequest;
 import com.par.jbfh.auth.dto.UserResponse;
 import com.par.jbfh.auth.entity.Club;
@@ -85,6 +86,38 @@ public class UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + id));
         return toUserResponse(user);
+    }
+
+    /**
+     * Смена пароля самим пользователем. Требует указания старого пароля.
+     */
+    @Transactional
+    public void changeOwnPassword(UserPrincipal principal, ChangePasswordRequest request) {
+        if (principal == null) {
+            throw new IllegalArgumentException("User not authenticated");
+        }
+
+        User user = userRepository.findByUsername(principal.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + principal.getUsername()));
+
+        if (request.getOldPassword() == null || !passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("Old password is incorrect");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+    }
+
+    /**
+     * Административная смена пароля любому пользователю. Старый пароль не требуется.
+     */
+    @Transactional
+    public void changeUserPasswordAsAdmin(UUID userId, ChangePasswordRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
     }
 
     private UserResponse toUserResponse(User user) {

@@ -1,7 +1,7 @@
 # JBFH — Hockey Schools Management API
 
 **JBFH** — REST API для управления детскими хоккейными школами в Беларуси.  
-Построен на Spring Boot 4 с JWT-аутентификацией, ролевой моделью доступа и Swagger-документацией.
+Построен на Spring Boot 4 с JWT-аутентификацией, ролевой моделью доступа, загрузкой файлов и Swagger-документацией.
 
 ---
 
@@ -29,8 +29,9 @@ src/
 │   │   │   ├── controller/
 │   │   │   │   ├── AuthController.java      # POST /api/v1/auth/login
 │   │   │   │   ├── RoleController.java       # GET  /api/v1/roles
-│   │   │   │   └── UserController.java       # POST/GET /api/v1/users
+│   │   │   │   └── UserController.java       # CRUD /api/v1/users
 │   │   │   ├── dto/
+│   │   │   │   ├── ChangePasswordRequest.java
 │   │   │   │   ├── CreateUserRequest.java
 │   │   │   │   ├── LoginRequest.java
 │   │   │   │   ├── LoginResponse.java
@@ -45,7 +46,16 @@ src/
 │   │   │   │   └── UserRepository.java
 │   │   │   └── service/
 │   │   │       ├── RoleService.java
+│   │   │       ├── UserInitService.java
 │   │   │       └── UserService.java
+│   │   ├── club/
+│   │   │   ├── controller/ClubController.java   # CRUD /api/v1/clubs
+│   │   │   ├── dto/ (CreateClubRequest, UpdateClubRequest, ClubResponse)
+│   │   │   └── service/ClubService.java
+│   │   ├── storage/
+│   │   │   ├── FileStorage.java                 # Интерфейс файлового хранилища
+│   │   │   ├── LocalFileStorage.java            # Локальная реализация
+│   │   │   └── enums/FileType.java              # Типы файлов (CLUB_LOGO, USER_AVATAR)
 │   │   ├── common/exception/
 │   │   │   └── GlobalExceptionHandler.java
 │   │   ├── config/
@@ -90,7 +100,27 @@ src/
 | `GET` | `/swagger-ui/index.html` | Swagger UI |
 | `GET` | `/api-docs` | OpenAPI JSON спецификация |
 
-### Требуют аутентификации (JWT Bearer Token)
+### Управление клубами
+
+| Метод | URL | Роль | Описание |
+|-------|-----|------|----------|
+| `POST` | `/api/v1/clubs` | `ROLE_ADMIN` | Создать клуб |
+| `GET` | `/api/v1/clubs?page=0&size=10` | `ROLE_ADMIN`, `ROLE_METHODIST` | Список клубов (с пагинацией) |
+| `GET` | `/api/v1/clubs/{id}` | `ROLE_ADMIN`, `ROLE_METHODIST` | Детали клуба |
+| `PUT` | `/api/v1/clubs/{id}` | `ROLE_ADMIN` | Обновить клуб (address, description) |
+| `POST` | `/api/v1/clubs/{id}/logo` | `ROLE_ADMIN` | Загрузить/обновить логотип клуба |
+| `GET` | `/api/v1/clubs/{id}/logo` | `ROLE_ADMIN`, `ROLE_METHODIST` | Получить логотип клуба |
+
+### Управление пользователями
+
+| Метод | URL | Роль | Описание |
+|-------|-----|------|----------|
+| `POST` | `/api/v1/users` | `ROLE_ADMIN`, `ROLE_CLUB` | Создать пользователя |
+| `GET` | `/api/v1/users/{id}` | `ROLE_ADMIN` | Получить пользователя по ID |
+| `PUT` | `/api/v1/users/me/password` | Любой аутентифицированный | Сменить свой пароль (требуется oldPassword) |
+| `PUT` | `/api/v1/users/{id}/password` | `ROLE_ADMIN` | Сменить пароль любому пользователю (админ) |
+
+### Примеры (демонстрация ролей)
 
 | Метод | URL | Роль | Описание |
 |-------|-----|------|----------|
@@ -98,8 +128,6 @@ src/
 | `GET` | `/api/v1/admin/stats` | `ROLE_ADMIN` | Статистика системы |
 | `GET` | `/api/v1/coach/my-team` | `ROLE_COACH`, `ROLE_MAIN_COACH` | Моя команда |
 | `GET` | `/api/v1/coach/schedule` | `ROLE_COACH`, `ROLE_MAIN_COACH` | Расписание |
-| `POST` | `/api/v1/users` | `ROLE_ADMIN`, `ROLE_CLUB` | Создать пользователя |
-| `GET` | `/api/v1/users/{id}` | `ROLE_ADMIN` | Получить пользователя по ID |
 
 ---
 
@@ -107,12 +135,32 @@ src/
 
 При старте приложения автоматически создаются 6 ролей:
 
-- `ROLE_ADMIN`
-- `ROLE_CLUB`
-- `ROLE_METHODIST`
-- `ROLE_CLUB_METHODIST`
-- `ROLE_COACH`
-- `ROLE_MAIN_COACH`
+- `ROLE_ADMIN` — администратор системы (без клуба)
+- `ROLE_CLUB` — представитель клуба
+- `ROLE_METHODIST` — методист (без клуба)
+- `ROLE_CLUB_METHODIST` — клубный методист
+- `ROLE_COACH` — тренер
+- `ROLE_MAIN_COACH` — главный тренер
+
+### Привязка к клубу
+
+- **Без клуба**: `ROLE_ADMIN`, `ROLE_METHODIST`
+- **С клубом** (обязательно): `ROLE_CLUB`, `ROLE_CLUB_METHODIST`, `ROLE_COACH`, `ROLE_MAIN_COACH`
+
+---
+
+## FileStorage — система хранения файлов
+
+Файлы (логотипы клубов, аватарки пользователей) хранятся через абстракцию `FileStorage`:
+
+- **FileStorage** — интерфейс с методами `save()`, `delete()`, `getResource()`, `validate()`
+- **LocalFileStorage** — реализация хранения в локальной файловой системе (папка `uploads/`)
+- **FileType** — enum с типами файлов и их ограничениями:
+
+| Тип | Подпапка | Макс. размер | Разрешённые MIME-типы |
+|-----|----------|-------------|----------------------|
+| `CLUB_LOGO` | `uploads/logos/` | 200 KB | image/jpeg, image/png, image/webp, image/svg+xml, image/gif |
+| `USER_AVATAR` | `uploads/avatars/` | 1 MB | image/jpeg, image/png, image/webp |
 
 ---
 
@@ -123,6 +171,8 @@ src/
 | Логин | Пароль | Роль |
 |-------|--------|------|
 | `admin` | `admin123` | `ROLE_ADMIN` |
+
+---
 
 ## Swagger UI
 
@@ -190,6 +240,14 @@ docker compose up -d
 |----------|----------|
 | `jwt.secret` | `jbfh-secret-key-2026-...` |
 | `jwt.expiration` | `86400000` (24 часа) |
+
+### Загрузка файлов
+
+| Параметр | Значение |
+|----------|----------|
+| `app.upload.base-path` | `uploads` |
+| `spring.servlet.multipart.max-file-size` | `200KB` |
+| `spring.servlet.multipart.max-request-size` | `200KB` |
 
 ---
 

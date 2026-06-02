@@ -1,5 +1,6 @@
 package com.par.jbfh.auth.controller;
 
+import com.par.jbfh.auth.dto.ChangePasswordRequest;
 import com.par.jbfh.auth.dto.CreateUserRequest;
 import com.par.jbfh.auth.dto.UserResponse;
 import com.par.jbfh.auth.service.UserService;
@@ -9,10 +10,12 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -37,5 +40,24 @@ public class UserController {
     @Operation(summary = "Get user by ID", description = "Returns user details. Admin only.")
     public UserResponse getUserById(@PathVariable UUID id) {
         return userService.getUserById(id);
+    }
+
+    @PutMapping("/me/password")
+    @Operation(summary = "Change own password", description = "Change password for the currently authenticated user. Requires old password.")
+    public ResponseEntity<Map<String, String>> changeOwnPassword(
+            @Valid @RequestBody ChangePasswordRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        userService.changeOwnPassword(principal, request);
+        return ResponseEntity.ok(Map.of("message", "Password changed successfully"));
+    }
+
+    @PutMapping("/{id}/password")
+    @Secured("ROLE_ADMIN")
+    @Operation(summary = "Change user password (Admin)", description = "Admin can change password for any user. Old password is not required.")
+    public ResponseEntity<Map<String, String>> changeUserPasswordAsAdmin(
+            @PathVariable UUID id,
+            @Valid @RequestBody ChangePasswordRequest request) {
+        userService.changeUserPasswordAsAdmin(id, request);
+        return ResponseEntity.ok(Map.of("message", "Password changed successfully for user: " + id));
     }
 }

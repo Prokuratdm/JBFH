@@ -32,7 +32,7 @@ public class ClubController {
 
     @PostMapping
     @Secured("ROLE_ADMIN")
-    @Operation(summary = "Create club", description = "Create a new club with an associated user with ROLE_CLUB. Admin only.")
+    @Operation(summary = "Create club", description = "Create a new club. Admin only.")
     @ResponseStatus(HttpStatus.CREATED)
     public ClubResponse createClub(@Valid @RequestBody CreateClubRequest request) {
         return clubService.createClub(request);
