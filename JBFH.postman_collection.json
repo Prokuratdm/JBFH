@@ -1,0 +1,279 @@
+{
+  "info": {
+    "name": "JBFH — Hockey Schools Management API",
+    "description": "REST API для управления детскими хоккейными школами в Беларуси. Все защищённые эндпоинты требуют JWT токен в заголовке Authorization: Bearer {{token}}.\n\nПеременные:\n- baseUrl: http://localhost:8080\n- token: JWT токен (получить через POST /api/v1/auth/login)\n- clubId: ID клуба\n- teamId: ID команды\n- userId: ID пользователя",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "token", "value": "" },
+    { "key": "clubId", "value": "put-your-club-id-here" },
+    { "key": "teamId", "value": "put-your-team-id-here" },
+    { "key": "userId", "value": "put-your-user-id-here" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login (получить JWT токен)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('token', jsonData.token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"] }
+          }
+        },
+        {
+          "name": "Получить список всех ролей",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/roles", "host": ["{{baseUrl}}"], "path": ["api", "v1", "roles"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Clubs",
+      "item": [
+        {
+          "name": "Создать клуб (ROLE_ADMIN)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"HC Test Club\",\n  \"address\": \"Minsk, Belarus\",\n  \"description\": \"Test hockey club\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/clubs", "host": ["{{baseUrl}}"], "path": ["api", "v1", "clubs"] }
+          }
+        },
+        {
+          "name": "Получить список клубов (ROLE_ADMIN, ROLE_METHODIST)",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+            "url": { "raw": "{{baseUrl}}/api/v1/clubs?page=0&size=10", "host": ["{{baseUrl}}"], "path": ["api", "v1", "clubs"], "query": [ { "key": "page", "value": "0" }, { "key": "size", "value": "10" } ] }
+          }
+        },
+        {
+          "name": "Получить клуб по ID (ROLE_ADMIN, ROLE_METHODIST)",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+            "url": { "raw": "{{baseUrl}}/api/v1/clubs/{{clubId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "clubs", "{{clubId}}"] }
+          }
+        },
+        {
+          "name": "Обновить клуб (ROLE_ADMIN)",
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"address\": \"Updated address, Minsk\",\n  \"description\": \"Updated description\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/clubs/{{clubId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "clubs", "{{clubId}}"] }
+          }
+        },
+        {
+          "name": "Загрузить логотип клуба (ROLE_ADMIN)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+            "body": { "mode": "formdata", "formdata": [ { "key": "file", "type": "file", "description": "Image file (max 200KB)" } ] },
+            "url": { "raw": "{{baseUrl}}/api/v1/clubs/{{clubId}}/logo", "host": ["{{baseUrl}}"], "path": ["api", "v1", "clubs", "{{clubId}}", "logo"] }
+          }
+        },
+        {
+          "name": "Получить логотип клуба (ROLE_ADMIN, ROLE_METHODIST)",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+            "url": { "raw": "{{baseUrl}}/api/v1/clubs/{{clubId}}/logo", "host": ["{{baseUrl}}"], "path": ["api", "v1", "clubs", "{{clubId}}", "logo"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Создать пользователя (ROLE_ADMIN, ROLE_CLUB)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"coach1\",\n  \"password\": \"coach123\",\n  \"email\": \"coach1@example.com\",\n  \"roles\": [\"ROLE_COACH\"],\n  \"clubId\": \"{{clubId}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/users", "host": ["{{baseUrl}}"], "path": ["api", "v1", "users"] }
+          }
+        },
+        {
+          "name": "Получить пользователя по ID (ROLE_ADMIN)",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+            "url": { "raw": "{{baseUrl}}/api/v1/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "users", "{{userId}}"] }
+          }
+        },
+        {
+          "name": "Сменить свой пароль",
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"oldPassword\": \"admin123\",\n  \"newPassword\": \"newPassword123\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/users/me/password", "host": ["{{baseUrl}}"], "path": ["api", "v1", "users", "me", "password"] }
+          }
+        },
+        {
+          "name": "Админская смена пароля (ROLE_ADMIN)",
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"newPassword\": \"resetPassword123\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/users/{{userId}}/password", "host": ["{{baseUrl}}"], "path": ["api", "v1", "users", "{{userId}}", "password"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Teams",
+      "item": [
+        {
+          "name": "Создать команду (ROLE_CLUB)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Team 2015\",\n  \"year\": 2015,\n  \"description\": \"Команда 2015 года рождения\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/clubs/{{clubId}}/teams", "host": ["{{baseUrl}}"], "path": ["api", "v1", "clubs", "{{clubId}}", "teams"] }
+          }
+        },
+        {
+          "name": "Получить список команд (пагинация, year DESC)",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+            "url": { "raw": "{{baseUrl}}/api/v1/clubs/{{clubId}}/teams?page=0&size=18", "host": ["{{baseUrl}}"], "path": ["api", "v1", "clubs", "{{clubId}}", "teams"], "query": [ { "key": "page", "value": "0" }, { "key": "size", "value": "18" } ] }
+          }
+        },
+        {
+          "name": "Получить команду по ID",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+            "url": { "raw": "{{baseUrl}}/api/v1/clubs/{{clubId}}/teams/{{teamId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "clubs", "{{clubId}}", "teams", "{{teamId}}"] }
+          }
+        },
+        {
+          "name": "Обновить команду (ROLE_CLUB)",
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Team 2016\",\n  \"year\": 2016,\n  \"description\": \"Обновлённое описание\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/clubs/{{clubId}}/teams/{{teamId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "clubs", "{{clubId}}", "teams", "{{teamId}}"] }
+          }
+        },
+        {
+          "name": "Деактивировать команду (ROLE_CLUB)",
+          "request": {
+            "method": "PATCH",
+            "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+            "url": { "raw": "{{baseUrl}}/api/v1/clubs/{{clubId}}/teams/{{teamId}}/active?active=false", "host": ["{{baseUrl}}"], "path": ["api", "v1", "clubs", "{{clubId}}", "teams", "{{teamId}}", "active"], "query": [ { "key": "active", "value": "false" } ] }
+          }
+        },
+        {
+          "name": "Активировать команду (ROLE_CLUB)",
+          "request": {
+            "method": "PATCH",
+            "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+            "url": { "raw": "{{baseUrl}}/api/v1/clubs/{{clubId}}/teams/{{teamId}}/active?active=true", "host": ["{{baseUrl}}"], "path": ["api", "v1", "clubs", "{{clubId}}", "teams", "{{teamId}}", "active"], "query": [ { "key": "active", "value": "true" } ] }
+          }
+        },
+        {
+          "name": "Загрузить логотип команды (ROLE_CLUB)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+            "body": { "mode": "formdata", "formdata": [ { "key": "file", "type": "file", "description": "Image file (max 200KB)" } ] },
+            "url": { "raw": "{{baseUrl}}/api/v1/clubs/{{clubId}}/teams/{{teamId}}/logo", "host": ["{{baseUrl}}"], "path": ["api", "v1", "clubs", "{{clubId}}", "teams", "{{teamId}}", "logo"] }
+          }
+        },
+        {
+          "name": "Получить логотип команды",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+            "url": { "raw": "{{baseUrl}}/api/v1/clubs/{{clubId}}/teams/{{teamId}}/logo", "host": ["{{baseUrl}}"], "path": ["api", "v1", "clubs", "{{clubId}}", "teams", "{{teamId}}", "logo"] }
+          }
+        },
+        {
+          "name": "Список тренеров команды (ROLE_CLUB, ROLE_CLUB_METHODIST)",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+            "url": { "raw": "{{baseUrl}}/api/v1/clubs/{{clubId}}/teams/{{teamId}}/coaches", "host": ["{{baseUrl}}"], "path": ["api", "v1", "clubs", "{{clubId}}", "teams", "{{teamId}}", "coaches"] }
+          }
+        },
+        {
+          "name": "Назначить тренера команде (ROLE_CLUB)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"userId\": \"{{userId}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/clubs/{{clubId}}/teams/{{teamId}}/coaches", "host": ["{{baseUrl}}"], "path": ["api", "v1", "clubs", "{{clubId}}", "teams", "{{teamId}}", "coaches"] }
+          }
+        },
+        {
+          "name": "Убрать тренера из команды (ROLE_CLUB)",
+          "request": {
+            "method": "DELETE",
+            "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+            "url": { "raw": "{{baseUrl}}/api/v1/clubs/{{clubId}}/teams/{{teamId}}/coaches/{{userId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "clubs", "{{clubId}}", "teams", "{{teamId}}", "coaches", "{{userId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Examples",
+      "item": [
+        {
+          "name": "Админ-панель (ROLE_ADMIN)",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/dashboard", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "dashboard"] }
+          }
+        },
+        {
+          "name": "Статистика системы (ROLE_ADMIN)",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/stats", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "stats"] }
+          }
+        },
+        {
+          "name": "Моя команда (ROLE_COACH, ROLE_MAIN_COACH)",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+            "url": { "raw": "{{baseUrl}}/api/v1/coach/my-team", "host": ["{{baseUrl}}"], "path": ["api", "v1", "coach", "my-team"] }
+          }
+        },
+        {
+          "name": "Расписание (ROLE_COACH, ROLE_MAIN_COACH)",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+            "url": { "raw": "{{baseUrl}}/api/v1/coach/schedule", "host": ["{{baseUrl}}"], "path": ["api", "v1", "coach", "schedule"] }
+          }
+        }
+      ]
+    }
+  ]
+}

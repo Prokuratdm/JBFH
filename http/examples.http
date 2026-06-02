@@ -1,0 +1,15 @@
+### Админ-панель (ROLE_ADMIN)
+GET {{baseUrl}}/api/v1/admin/dashboard
+Authorization: Bearer {{token}}
+
+### Статистика системы (ROLE_ADMIN)
+GET {{baseUrl}}/api/v1/admin/stats
+Authorization: Bearer {{token}}
+
+### Моя команда (ROLE_COACH, ROLE_MAIN_COACH)
+GET {{baseUrl}}/api/v1/coach/my-team
+Authorization: Bearer {{token}}
+
+### Расписание (ROLE_COACH, ROLE_MAIN_COACH)
+GET {{baseUrl}}/api/v1/coach/schedule
+Authorization: Bearer {{token}}

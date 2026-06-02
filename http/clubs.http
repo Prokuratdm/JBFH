@@ -1,0 +1,44 @@
+### Создать клуб (ROLE_ADMIN)
+POST {{baseUrl}}/api/v1/clubs
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "HC Test Club",
+  "address": "Minsk, Belarus",
+  "description": "Test hockey club"
+}
+
+### Получить список клубов с пагинацией (ROLE_ADMIN, ROLE_METHODIST)
+GET {{baseUrl}}/api/v1/clubs?page=0&size=10
+Authorization: Bearer {{token}}
+
+### Получить клуб по ID (ROLE_ADMIN, ROLE_METHODIST)
+GET {{baseUrl}}/api/v1/clubs/{{clubId}}
+Authorization: Bearer {{token}}
+
+### Обновить клуб (ROLE_ADMIN)
+PUT {{baseUrl}}/api/v1/clubs/{{clubId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "address": "Updated address, Minsk",
+  "description": "Updated description"
+}
+
+### Загрузить логотип клуба (ROLE_ADMIN)
+POST {{baseUrl}}/api/v1/clubs/{{clubId}}/logo
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="file"; filename="logo.png"
+Content-Type: image/png
+
+< ./test-logo.png
+--boundary--
+
+### Получить логотип клуба (ROLE_ADMIN, ROLE_METHODIST)
+GET {{baseUrl}}/api/v1/clubs/{{clubId}}/logo
+Authorization: Bearer {{token}}

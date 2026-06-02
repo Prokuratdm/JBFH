@@ -1,0 +1,35 @@
+### Создать пользователя (ROLE_ADMIN, ROLE_CLUB)
+POST {{baseUrl}}/api/v1/users
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "username": "coach1",
+  "password": "coach123",
+  "email": "coach1@example.com",
+  "roles": ["ROLE_COACH"],
+  "clubId": "{{clubId}}"
+}
+
+### Получить пользователя по ID (ROLE_ADMIN)
+GET {{baseUrl}}/api/v1/users/{{userId}}
+Authorization: Bearer {{token}}
+
+### Сменить свой пароль (любой аутентифицированный)
+PUT {{baseUrl}}/api/v1/users/me/password
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "oldPassword": "admin123",
+  "newPassword": "newPassword123"
+}
+
+### Админская смена пароля (ROLE_ADMIN)
+PUT {{baseUrl}}/api/v1/users/{{userId}}/password
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "newPassword": "resetPassword123"
+}

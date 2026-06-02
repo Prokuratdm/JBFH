@@ -198,7 +198,7 @@ class TeamServiceTest {
 
     @Test
     void getTeamsByClubShouldReturnAllForClubMethodist() {
-        currentUser.setRoles(Set.of(new Role("ROLE_CLUB_METHODIST")));
+        currentUser.setRoles(Set.of(new Role("ROLE_METHODIST")));
         currentUser.setClub(null);
         mockAuthenticatedUser(currentUser);
 

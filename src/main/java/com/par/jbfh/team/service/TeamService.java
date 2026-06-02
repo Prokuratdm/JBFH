@@ -67,11 +67,11 @@ public class TeamService {
         Club club = clubRepository.findById(clubId)
                 .orElseThrow(() -> new IllegalArgumentException("Club not found: " + clubId));
 
-        boolean isClubMethodist = hasRole(currentUser, "ROLE_CLUB_METHODIST");
-        boolean isClubRole = hasRole(currentUser, "ROLE_CLUB");
+        boolean isAdminMethodist = hasRole(currentUser, "ROLE_METHODIST")||hasRole(currentUser, "ROLE_ADMIN");
+        boolean isClubRole = hasRole(currentUser, "ROLE_CLUB")||hasRole(currentUser, "ROLE_CLUB_METHODIST");
         boolean isCoach = hasRole(currentUser, "ROLE_COACH") || hasRole(currentUser, "ROLE_MAIN_COACH");
 
-        if (isClubMethodist) {
+        if (isAdminMethodist) {
             // Club methodist sees all teams of all clubs
             return teamRepository.findByClubIdAndActiveTrue(clubId, pageable)
                     .map(this::toTeamResponse);

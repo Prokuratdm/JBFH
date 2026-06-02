@@ -1,0 +1,70 @@
+### Создать команду (ROLE_CLUB)
+POST {{baseUrl}}/api/v1/clubs/{{clubId}}/teams
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Team 2015",
+  "year": 2015,
+  "description": "Команда 2015 года рождения"
+}
+
+### Получить список команд клуба с пагинацией (ROLE_CLUB, ROLE_CLUB_METHODIST, ROLE_COACH, ROLE_MAIN_COACH)
+GET {{baseUrl}}/api/v1/clubs/{{clubId}}/teams?page=0&size=18
+Authorization: Bearer {{token}}
+
+### Получить команду по ID
+GET {{baseUrl}}/api/v1/clubs/{{clubId}}/teams/{{teamId}}
+Authorization: Bearer {{token}}
+
+### Обновить команду (ROLE_CLUB)
+PUT {{baseUrl}}/api/v1/clubs/{{clubId}}/teams/{{teamId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Team 2016",
+  "year": 2016,
+  "description": "Обновлённое описание"
+}
+
+### Деактивировать команду (ROLE_CLUB)
+PATCH {{baseUrl}}/api/v1/clubs/{{clubId}}/teams/{{teamId}}/active?active=false
+Authorization: Bearer {{token}}
+
+### Активировать команду (ROLE_CLUB)
+PATCH {{baseUrl}}/api/v1/clubs/{{clubId}}/teams/{{teamId}}/active?active=true
+Authorization: Bearer {{token}}
+
+### Загрузить логотип команды (ROLE_CLUB)
+POST {{baseUrl}}/api/v1/clubs/{{clubId}}/teams/{{teamId}}/logo
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="file"; filename="team-logo.png"
+Content-Type: image/png
+
+< ./test-logo.png
+--boundary--
+
+### Получить логотип команды
+GET {{baseUrl}}/api/v1/clubs/{{clubId}}/teams/{{teamId}}/logo
+Authorization: Bearer {{token}}
+
+### Получить список тренеров команды (ROLE_CLUB, ROLE_CLUB_METHODIST)
+GET {{baseUrl}}/api/v1/clubs/{{clubId}}/teams/{{teamId}}/coaches
+Authorization: Bearer {{token}}
+
+### Назначить тренера команде (ROLE_CLUB)
+POST {{baseUrl}}/api/v1/clubs/{{clubId}}/teams/{{teamId}}/coaches
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "userId": "{{userId}}"
+}
+
+### Убрать тренера из команды (ROLE_CLUB)
+DELETE {{baseUrl}}/api/v1/clubs/{{clubId}}/teams/{{teamId}}/coaches/{{userId}}
+Authorization: Bearer {{token}}
