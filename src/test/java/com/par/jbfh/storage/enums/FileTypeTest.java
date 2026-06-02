@@ -53,4 +53,20 @@ class FileTypeTest {
         assertThat(FileType.TEAM_LOGO.getAllowedContentTypes())
                 .containsExactlyInAnyOrder("image/jpeg", "image/png", "image/webp", "image/svg+xml", "image/gif");
     }
+
+    @Test
+    void exercisePictureShouldHaveCorrectSubdirectory() {
+        assertThat(FileType.EXERCISE_PICTURE.getSubdirectory()).isEqualTo("exercises");
+    }
+
+    @Test
+    void exercisePictureShouldHaveCorrectMaxSize() {
+        assertThat(FileType.EXERCISE_PICTURE.getMaxSizeBytes()).isEqualTo(500 * 1024);
+    }
+
+    @Test
+    void exercisePictureShouldAllowCorrectContentTypes() {
+        assertThat(FileType.EXERCISE_PICTURE.getAllowedContentTypes())
+                .containsExactlyInAnyOrder("image/jpeg", "image/png", "image/webp");
+    }
 }

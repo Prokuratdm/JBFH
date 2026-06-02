@@ -10,6 +10,8 @@ com.par.jbfh/
 ├── auth/          — Аутентификация, авторизация, пользователи, роли
 ├── club/          — Управление клубами (CRUD, логотипы)
 ├── team/          — Управление командами (CRUD, логотипы, назначение тренеров)
+├── inventory/     — Конструктор: инвентарь (CRUD, общий/клубный)
+├── exercise/      — Конструктор: упражнения (CRUD, картинки, привязка инвентаря)
 ├── storage/       — Файловое хранилище (интерфейс + LocalFileStorage + FileType enum)
 ├── config/        — Spring Security, JWT, Swagger конфигурации
 ├── example/       — Примеры контроллеров для демонстрации @Secured
@@ -124,7 +126,7 @@ app.upload.base-path=uploads
 ## Database
 - PostgreSQL via Docker Compose
 - JPA ddl-auto=update (tables created automatically)
-- Tables: users, roles, user_roles, clubs, teams, team_coaches
+- Tables: users, roles, user_roles, clubs, teams, team_coaches, inventory, exercises, exercise_inventory
 
 ## Teams (package: team/)
 
@@ -157,6 +159,59 @@ app.upload.base-path=uploads
 - Name must be unique within the club (unique constraint name + club_id)
 - Year is mandatory — год рождения участников
 - DELETE is not allowed; instead deactivate via `PATCH .../active?active=false`
+
+## Inventory (package: inventory/)
+
+### Entities
+- **Inventory** — id, name, club (ManyToOne, nullable = общий инвентарь), active (boolean, default true), createdAt.
+
+### API Endpoints (все требуют аутентификации)
+
+| Метод | URL | Роль | Описание |
+|-------|-----|------|----------|
+| `POST` | `/api/v1/inventory` | Все аутентифицированные | Создать инвентарь (админ/методист → без клуба; остальные → свой клуб) |
+| `GET` | `/api/v1/inventory?page=0&size=20&active=true` | Все аутентифицированные | Список (админ/методист — все; остальные — общий + своего клуба) |
+| `GET` | `/api/v1/inventory/{id}` | Все аутентифицированные | Детали |
+| `PUT` | `/api/v1/inventory/{id}` | `ROLE_ADMIN`, `ROLE_METHODIST`, `ROLE_CLUB`, `ROLE_CLUB_METHODIST` | Обновить |
+| `PATCH` | `/api/v1/inventory/{id}/active` | `ROLE_ADMIN`, `ROLE_METHODIST`, `ROLE_CLUB`, `ROLE_CLUB_METHODIST` | Деактивировать/активировать |
+
+### Inventory Visibility Rules
+- **ROLE_ADMIN, ROLE_METHODIST** — видят весь инвентарь
+- **ROLE_CLUB, ROLE_CLUB_METHODIST, ROLE_COACH, ROLE_MAIN_COACH** — общий (club is null) + инвентарь своего клуба
+
+### Inventory Creation Logic
+- Admin/methodist → club не проставляется (общий инвентарь), но могут указать clubId
+- Club-bound users → club проставляется автоматически из currentUser
+- Удаление запрещено — только деактивация
+- Названия могут повторяться у разных клубов
+
+## Exercises (package: exercise/)
+
+### Entities
+- **Exercise** — id, name (unique), description, picturePath, club (ManyToOne, nullable = общее), active (boolean, default true), createdAt, updatedAt.
+- **ExerciseInventory** — id, exercise (ManyToOne), inventory (ManyToOne). Unique constraint: (exercise_id, inventory_id). Many-to-many связь упражнений с требуемым инвентарём.
+
+### API Endpoints (все требуют аутентификации)
+
+| Метод | URL | Роль | Описание |
+|-------|-----|------|----------|
+| `POST` | `/api/v1/exercises` | Все аутентифицированные | Создать упражнение (с inventoryIds) |
+| `GET` | `/api/v1/exercises?page=0&size=20&active=true` | Все аутентифицированные | Список (админ/методист — все; остальные — общие + своего клуба) |
+| `GET` | `/api/v1/exercises/{id}` | Все аутентифицированные | Детали |
+| `PUT` | `/api/v1/exercises/{id}` | `ROLE_ADMIN`, `ROLE_METHODIST`, `ROLE_CLUB`, `ROLE_CLUB_METHODIST` | Обновить |
+| `PATCH` | `/api/v1/exercises/{id}/active` | `ROLE_ADMIN`, `ROLE_METHODIST`, `ROLE_CLUB`, `ROLE_CLUB_METHODIST` | Деактивировать/активировать |
+| `POST` | `/api/v1/exercises/{id}/picture` | `ROLE_ADMIN`, `ROLE_METHODIST`, `ROLE_CLUB`, `ROLE_CLUB_METHODIST` | Загрузить картинку |
+| `GET` | `/api/v1/exercises/{id}/picture` | Все аутентифицированные | Получить картинку |
+
+### Exercise Visibility Rules
+- **ROLE_ADMIN, ROLE_METHODIST** — видят все упражнения
+- **ROLE_CLUB, ROLE_CLUB_METHODIST, ROLE_COACH, ROLE_MAIN_COACH** — общие (club is null) + упражнения своего клуба
+
+### Exercise Creation Logic
+- Названия упражнений глобально уникальны (unique constraint на name)
+- При создании/обновлении можно указать список inventoryIds — требуемый инвентарь
+- Картинка загружается отдельным запросом (FileType: EXERCISE_PICTURE, max 500KB)
+- Удаление запрещено — только деактивация
 
 ## Testing
 Test structure mirrors main:

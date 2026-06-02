@@ -58,6 +58,18 @@ src/
 │   │   │   ├── entity/ (Team.java, TeamCoach.java)
 │   │   │   ├── repository/ (TeamRepository.java, TeamCoachRepository.java)
 │   │   │   └── service/TeamService.java
+│   │   ├── inventory/
+│   │   │   ├── controller/InventoryController.java   # CRUD /api/v1/inventory
+│   │   │   ├── dto/ (CreateInventoryRequest, UpdateInventoryRequest, InventoryResponse)
+│   │   │   ├── entity/Inventory.java
+│   │   │   ├── repository/InventoryRepository.java
+│   │   │   └── service/InventoryService.java
+│   │   ├── exercise/
+│   │   │   ├── controller/ExerciseController.java   # CRUD /api/v1/exercises
+│   │   │   ├── dto/ (CreateExerciseRequest, UpdateExerciseRequest, ExerciseResponse)
+│   │   │   ├── entity/ (Exercise.java, ExerciseInventory.java)
+│   │   │   ├── repository/ (ExerciseRepository.java, ExerciseInventoryRepository.java)
+│   │   │   └── service/ExerciseService.java
 │   │   ├── storage/
 │   │   │   ├── FileStorage.java                 # Интерфейс файлового хранилища
 │   │   │   ├── LocalFileStorage.java            # Локальная реализация
@@ -150,6 +162,28 @@ src/
 | `POST` | `/api/v1/clubs/{clubId}/teams/{id}/coaches` | `ROLE_CLUB` | Назначить тренера |
 | `DELETE` | `/api/v1/clubs/{clubId}/teams/{id}/coaches/{userId}` | `ROLE_CLUB` | Убрать тренера |
 
+### Конструктор: инвентарь
+
+| Метод | URL | Роль | Описание |
+|-------|-----|------|----------|
+| `POST` | `/api/v1/inventory` | Все аутентифицированные | Создать инвентарь (админ/методист → без клуба; остальные → свой клуб) |
+| `GET` | `/api/v1/inventory?page=0&size=20&active=true` | Все аутентифицированные | Список (админ/методист — все; остальные — общий + своего клуба) |
+| `GET` | `/api/v1/inventory/{id}` | Все аутентифицированные | Детали |
+| `PUT` | `/api/v1/inventory/{id}` | `ROLE_ADMIN`, `ROLE_METHODIST`, `ROLE_CLUB`, `ROLE_CLUB_METHODIST` | Обновить |
+| `PATCH` | `/api/v1/inventory/{id}/active` | `ROLE_ADMIN`, `ROLE_METHODIST`, `ROLE_CLUB`, `ROLE_CLUB_METHODIST` | Деактивировать/активировать |
+
+### Конструктор: упражнения
+
+| Метод | URL | Роль | Описание |
+|-------|-----|------|----------|
+| `POST` | `/api/v1/exercises` | Все аутентифицированные | Создать упражнение (с inventoryIds) |
+| `GET` | `/api/v1/exercises?page=0&size=20&active=true` | Все аутентифицированные | Список (админ/методист — все; остальные — общие + своего клуба) |
+| `GET` | `/api/v1/exercises/{id}` | Все аутентифицированные | Детали |
+| `PUT` | `/api/v1/exercises/{id}` | `ROLE_ADMIN`, `ROLE_METHODIST`, `ROLE_CLUB`, `ROLE_CLUB_METHODIST` | Обновить |
+| `PATCH` | `/api/v1/exercises/{id}/active` | `ROLE_ADMIN`, `ROLE_METHODIST`, `ROLE_CLUB`, `ROLE_CLUB_METHODIST` | Деактивировать/активировать |
+| `POST` | `/api/v1/exercises/{id}/picture` | `ROLE_ADMIN`, `ROLE_METHODIST`, `ROLE_CLUB`, `ROLE_CLUB_METHODIST` | Загрузить картинку |
+| `GET` | `/api/v1/exercises/{id}/picture` | Все аутентифицированные | Получить картинку |
+
 ### Примеры (демонстрация ролей)
 
 | Метод | URL | Роль | Описание |
@@ -192,6 +226,7 @@ src/
 | `CLUB_LOGO` | `uploads/logos/` | 200 KB | image/jpeg, image/png, image/webp, image/svg+xml, image/gif |
 | `USER_AVATAR` | `uploads/avatars/` | 1 MB | image/jpeg, image/png, image/webp |
 | `TEAM_LOGO` | `uploads/logos/teams/` | 200 KB | image/jpeg, image/png, image/webp, image/svg+xml, image/gif |
+| `EXERCISE_PICTURE` | `uploads/exercises/` | 500 KB | image/jpeg, image/png, image/webp |
 
 ---
 
