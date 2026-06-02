@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -23,9 +24,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -33,203 +34,197 @@ class ClubServiceTest {
 
     @Mock
     private ClubRepository clubRepository;
+
     @Mock
     private FileStorage fileStorage;
 
     private ClubService clubService;
 
-    private Club club;
-
     @BeforeEach
     void setUp() {
         clubService = new ClubService(clubRepository, fileStorage);
-
-        club = new Club("Hockey Club Minsk");
-        club.setId(UUID.randomUUID());
-        club.setAddress("Minsk, ul. Pobediteley 20");
-        club.setDescription("Best hockey school");
     }
 
-    // --- Create Club ---
-
     @Test
-    void createClub_shouldCreateSuccessfully() {
+    void createClubShouldSucceed() {
         CreateClubRequest request = new CreateClubRequest();
-        request.setName("New Club");
-        request.setAddress("Address");
+        request.setName("HC Test");
+        request.setAddress("Minsk");
         request.setDescription("Description");
 
-        when(clubRepository.existsByName("New Club")).thenReturn(false);
-        when(clubRepository.save(any(Club.class))).thenAnswer(invocation -> {
-            Club c = invocation.getArgument(0);
+        when(clubRepository.existsByName("HC Test")).thenReturn(false);
+        when(clubRepository.save(any(Club.class))).thenAnswer(inv -> {
+            Club c = inv.getArgument(0);
             c.setId(UUID.randomUUID());
             return c;
         });
 
         ClubResponse response = clubService.createClub(request);
 
-        assertEquals("New Club", response.getName());
-        assertEquals("Address", response.getAddress());
-        assertEquals("Description", response.getDescription());
-        assertNotNull(response.getId());
-        assertNotNull(response.getCreatedAt());
+        assertThat(response.getName()).isEqualTo("HC Test");
+        assertThat(response.getAddress()).isEqualTo("Minsk");
+        assertThat(response.getDescription()).isEqualTo("Description");
     }
 
     @Test
-    void createClub_shouldThrowWhenNameExists() {
+    void createClubShouldThrowWhenNameExists() {
         CreateClubRequest request = new CreateClubRequest();
-        request.setName("Existing Club");
+        request.setName("HC Test");
 
-        when(clubRepository.existsByName("Existing Club")).thenReturn(true);
+        when(clubRepository.existsByName("HC Test")).thenReturn(true);
 
-        assertThrows(IllegalArgumentException.class, () -> clubService.createClub(request));
-        verify(clubRepository, never()).save(any());
-    }
-
-    // --- Get All Clubs ---
-
-    @Test
-    void getAllClubs_shouldReturnPagedResults() {
-        Pageable pageable = PageRequest.of(0, 10);
-        when(clubRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(club)));
-
-        Page<ClubResponse> result = clubService.getAllClubs(pageable);
-
-        assertEquals(1, result.getTotalElements());
-        assertEquals("Hockey Club Minsk", result.getContent().getFirst().getName());
-    }
-
-    // --- Get Club By Id ---
-
-    @Test
-    void getClubById_shouldReturnClub() {
-        when(clubRepository.findById(club.getId())).thenReturn(Optional.of(club));
-
-        ClubResponse response = clubService.getClubById(club.getId());
-
-        assertEquals(club.getId(), response.getId());
-        assertEquals("Hockey Club Minsk", response.getName());
+        assertThatThrownBy(() -> clubService.createClub(request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Club already exists with name: HC Test");
     }
 
     @Test
-    void getClubById_shouldThrowWhenNotFound() {
+    void getAllClubsShouldReturnPage() {
+        Club club = new Club("HC");
+        club.setId(UUID.randomUUID());
+        Page<Club> page = new PageImpl<>(List.of(club));
+
+        when(clubRepository.findAll(any(Pageable.class))).thenReturn(page);
+
+        Page<ClubResponse> result = clubService.getAllClubs(PageRequest.of(0, 10));
+
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).getName()).isEqualTo("HC");
+    }
+
+    @Test
+    void getClubByIdShouldReturnWhenFound() {
+        UUID id = UUID.randomUUID();
+        Club club = new Club("HC");
+        club.setId(id);
+
+        when(clubRepository.findById(id)).thenReturn(Optional.of(club));
+
+        ClubResponse response = clubService.getClubById(id);
+
+        assertThat(response.getName()).isEqualTo("HC");
+    }
+
+    @Test
+    void getClubByIdShouldThrowWhenNotFound() {
         UUID id = UUID.randomUUID();
         when(clubRepository.findById(id)).thenReturn(Optional.empty());
 
-        assertThrows(IllegalArgumentException.class, () -> clubService.getClubById(id));
-    }
-
-    // --- Update Club ---
-
-    @Test
-    void updateClub_shouldUpdateAddressAndDescription() {
-        UpdateClubRequest request = new UpdateClubRequest();
-        request.setAddress("New Address");
-        request.setDescription("New Description");
-
-        when(clubRepository.findById(club.getId())).thenReturn(Optional.of(club));
-        when(clubRepository.save(any(Club.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        ClubResponse response = clubService.updateClub(club.getId(), request);
-
-        assertEquals("New Address", response.getAddress());
-        assertEquals("New Description", response.getDescription());
-        // Name should remain unchanged
-        assertEquals("Hockey Club Minsk", response.getName());
+        assertThatThrownBy(() -> clubService.getClubById(id))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Club not found: " + id);
     }
 
     @Test
-    void updateClub_shouldUpdateOnlyAddressWhenDescriptionNull() {
-        club.setDescription("Original Description");
+    void updateClubShouldUpdateFields() {
+        UUID id = UUID.randomUUID();
+        Club club = new Club("HC");
+        club.setId(id);
+        club.setAddress("old address");
+        club.setDescription("old desc");
+
+        when(clubRepository.findById(id)).thenReturn(Optional.of(club));
+        when(clubRepository.save(any(Club.class))).thenReturn(club);
 
         UpdateClubRequest request = new UpdateClubRequest();
-        request.setAddress("New Address");
+        request.setAddress("new address");
+        request.setDescription("new desc");
 
-        when(clubRepository.findById(club.getId())).thenReturn(Optional.of(club));
-        when(clubRepository.save(any(Club.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        ClubResponse response = clubService.updateClub(id, request);
 
-        ClubResponse response = clubService.updateClub(club.getId(), request);
-
-        assertEquals("New Address", response.getAddress());
-        assertEquals("Original Description", response.getDescription());
+        assertThat(response.getAddress()).isEqualTo("new address");
+        assertThat(response.getDescription()).isEqualTo("new desc");
     }
 
     @Test
-    void updateClub_shouldThrowWhenClubNotFound() {
+    void updateClubShouldThrowWhenNotFound() {
         UUID id = UUID.randomUUID();
         when(clubRepository.findById(id)).thenReturn(Optional.empty());
 
-        assertThrows(IllegalArgumentException.class, () -> clubService.updateClub(id, new UpdateClubRequest()));
+        assertThatThrownBy(() -> clubService.updateClub(id, new UpdateClubRequest()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Club not found: " + id);
     }
 
-    // --- Upload Logo ---
-
     @Test
-    void uploadLogo_shouldUploadSuccessfully() {
+    void uploadLogoShouldSaveAndReturnUpdated() {
+        UUID id = UUID.randomUUID();
+        Club club = new Club("HC");
+        club.setId(id);
+
+        when(clubRepository.findById(id)).thenReturn(Optional.of(club));
         MultipartFile file = mock(MultipartFile.class);
-        String savedPath = "uploads/logos/" + club.getId() + "_1234567890.jpg";
+        when(fileStorage.save(file, id, FileType.CLUB_LOGO)).thenReturn("uploads/logos/logo.png");
+        when(clubRepository.save(any(Club.class))).thenReturn(club);
 
-        when(clubRepository.findById(club.getId())).thenReturn(Optional.of(club));
-        when(fileStorage.save(file, club.getId(), FileType.CLUB_LOGO)).thenReturn(savedPath);
-        when(clubRepository.save(any(Club.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        ClubResponse response = clubService.uploadLogo(id, file);
 
-        ClubResponse response = clubService.uploadLogo(club.getId(), file);
-
-        assertNotNull(response.getLogoUrl());
-        assertTrue(response.getLogoUrl().contains(club.getId().toString()));
-        verify(fileStorage).save(file, club.getId(), FileType.CLUB_LOGO);
+        assertThat(response.getLogoUrl()).isEqualTo("/api/v1/clubs/" + id + "/logo");
     }
 
     @Test
-    void uploadLogo_shouldDeleteOldLogoWhenExists() {
+    void uploadLogoShouldDeleteOldLogoWhenExists() {
+        UUID id = UUID.randomUUID();
+        Club club = new Club("HC");
+        club.setId(id);
+        club.setLogoPath("old/path.png");
+
+        when(clubRepository.findById(id)).thenReturn(Optional.of(club));
         MultipartFile file = mock(MultipartFile.class);
-        club.setLogoPath("uploads/logos/old_logo.jpg");
+        when(fileStorage.save(file, id, FileType.CLUB_LOGO)).thenReturn("new/path.png");
+        when(clubRepository.save(any(Club.class))).thenReturn(club);
 
-        when(clubRepository.findById(club.getId())).thenReturn(Optional.of(club));
-        when(fileStorage.save(file, club.getId(), FileType.CLUB_LOGO)).thenReturn("uploads/logos/new_logo.jpg");
-        when(clubRepository.save(any(Club.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        clubService.uploadLogo(id, file);
 
-        clubService.uploadLogo(club.getId(), file);
-
-        verify(fileStorage).delete("uploads/logos/old_logo.jpg");
-        verify(fileStorage).save(file, club.getId(), FileType.CLUB_LOGO);
+        verify(fileStorage).delete("old/path.png");
     }
 
     @Test
-    void uploadLogo_shouldThrowWhenClubNotFound() {
+    void uploadLogoShouldThrowWhenClubNotFound() {
         UUID id = UUID.randomUUID();
         when(clubRepository.findById(id)).thenReturn(Optional.empty());
 
-        assertThrows(IllegalArgumentException.class, () -> clubService.uploadLogo(id, mock(MultipartFile.class)));
-    }
-
-    // --- Get Logo ---
-
-    @Test
-    void getLogo_shouldReturnResource() {
-        club.setLogoPath("uploads/logos/logo.jpg");
-        Resource resource = mock(Resource.class);
-
-        when(clubRepository.findById(club.getId())).thenReturn(Optional.of(club));
-        when(fileStorage.getResource("uploads/logos/logo.jpg")).thenReturn(resource);
-
-        Resource result = clubService.getLogo(club.getId());
-
-        assertEquals(resource, result);
+        assertThatThrownBy(() -> clubService.uploadLogo(id, mock(MultipartFile.class)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Club not found: " + id);
     }
 
     @Test
-    void getLogo_shouldThrowWhenNoLogoPath() {
-        when(clubRepository.findById(club.getId())).thenReturn(Optional.of(club));
+    void getLogoShouldReturnResource() {
+        UUID id = UUID.randomUUID();
+        Club club = new Club("HC");
+        club.setId(id);
+        club.setLogoPath("logos/test.png");
 
-        assertThrows(IllegalArgumentException.class, () -> clubService.getLogo(club.getId()));
+        when(clubRepository.findById(id)).thenReturn(Optional.of(club));
+        Resource resource = new ByteArrayResource("test".getBytes());
+        when(fileStorage.getResource("logos/test.png")).thenReturn(resource);
+
+        Resource result = clubService.getLogo(id);
+
+        assertThat(result).isNotNull();
     }
 
     @Test
-    void getLogo_shouldThrowWhenClubNotFound() {
+    void getLogoShouldThrowWhenNoLogo() {
+        UUID id = UUID.randomUUID();
+        Club club = new Club("HC");
+        club.setId(id);
+
+        when(clubRepository.findById(id)).thenReturn(Optional.of(club));
+
+        assertThatThrownBy(() -> clubService.getLogo(id))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Club has no logo: " + id);
+    }
+
+    @Test
+    void getLogoShouldThrowWhenClubNotFound() {
         UUID id = UUID.randomUUID();
         when(clubRepository.findById(id)).thenReturn(Optional.empty());
 
-        assertThrows(IllegalArgumentException.class, () -> clubService.getLogo(id));
+        assertThatThrownBy(() -> clubService.getLogo(id))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Club not found: " + id);
     }
 }

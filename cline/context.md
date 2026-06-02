@@ -9,6 +9,7 @@ Tech: Spring Boot 4.0.6 + Java 25 + PostgreSQL + JPA + Spring Security + OAuth2 
 com.par.jbfh/
 ├── auth/          — Аутентификация, авторизация, пользователи, роли
 ├── club/          — Управление клубами (CRUD, логотипы)
+├── team/          — Управление командами (CRUD, логотипы, назначение тренеров)
 ├── storage/       — Файловое хранилище (интерфейс + LocalFileStorage + FileType enum)
 ├── config/        — Spring Security, JWT, Swagger конфигурации
 ├── example/       — Примеры контроллеров для демонстрации @Secured
@@ -123,18 +124,56 @@ app.upload.base-path=uploads
 ## Database
 - PostgreSQL via Docker Compose
 - JPA ddl-auto=update (tables created automatically)
-- Tables: users, roles, user_roles, clubs
+- Tables: users, roles, user_roles, clubs, teams, team_coaches
+
+## Teams (package: team/)
+
+### Entities
+- **Team** — id, name, year (год рождения участников), description, logoPath, active (boolean, default true), club (ManyToOne), createdAt, updatedAt. Unique constraint: (name, club_id).
+- **TeamCoach** — id, team (ManyToOne), user (ManyToOne). Unique constraint: (team_id, user_id). Таблица мапинга тренеров/главных тренеров на команды.
+
+### API Endpoints (все требуют аутентификации)
+
+| Метод | URL | Роль | Описание |
+|-------|-----|------|----------|
+| `POST` | `/api/v1/clubs/{clubId}/teams` | `ROLE_CLUB` | Создать команду |
+| `GET` | `/api/v1/clubs/{clubId}/teams?page=0&size=18` | `ROLE_CLUB`, `ROLE_CLUB_METHODIST`, `ROLE_COACH`, `ROLE_MAIN_COACH` | Список команд (пагинация, дефолт сортировка year DESC) |
+| `GET` | `/api/v1/clubs/{clubId}/teams/{id}` | `ROLE_CLUB`, `ROLE_CLUB_METHODIST`, `ROLE_COACH`, `ROLE_MAIN_COACH` | Детали команды |
+| `PUT` | `/api/v1/clubs/{clubId}/teams/{id}` | `ROLE_CLUB` | Обновить команду |
+| `PATCH` | `/api/v1/clubs/{clubId}/teams/{id}/active` | `ROLE_CLUB` | Активировать/деактивировать команду |
+| `POST` | `/api/v1/clubs/{clubId}/teams/{id}/logo` | `ROLE_CLUB` | Загрузить/обновить логотип |
+| `GET` | `/api/v1/clubs/{clubId}/teams/{id}/logo` | `ROLE_CLUB`, `ROLE_CLUB_METHODIST`, `ROLE_COACH`, `ROLE_MAIN_COACH` | Получить логотип |
+| `GET` | `/api/v1/clubs/{clubId}/teams/{id}/coaches` | `ROLE_CLUB`, `ROLE_CLUB_METHODIST` | Список тренеров команды |
+| `POST` | `/api/v1/clubs/{clubId}/teams/{id}/coaches` | `ROLE_CLUB` | Назначить тренера |
+| `DELETE` | `/api/v1/clubs/{clubId}/teams/{id}/coaches/{userId}` | `ROLE_CLUB` | Убрать тренера |
+
+### Team Visibility Rules
+- **ROLE_CLUB_METHODIST** — видит все команды всех клубов
+- **ROLE_CLUB** — видит только команды своего клуба
+- **ROLE_COACH, ROLE_MAIN_COACH** — видят только команды, к которым назначены через TeamCoach
+
+### Team Creation Logic
+- Only **Club** (ROLE_CLUB) can create teams
+- Name must be unique within the club (unique constraint name + club_id)
+- Year is mandatory — год рождения участников
+- DELETE is not allowed; instead deactivate via `PATCH .../active?active=false`
 
 ## Testing
 Test structure mirrors main:
 ```
 src/test/java/com/par/jbfh/
-├── auth/
-│   ├── controller/
-│   │   └── RoleControllerTest.java
-│   └── service/
-│       └── RoleServiceTest.java
-└── example/
-    └── controller/
-        ├── AdminControllerTest.java
-        └── CoachControllerTest.java
+├── auth/service/
+│   ├── RoleServiceTest.java
+│   ├── UserInitServiceTest.java
+│   └── UserServiceTest.java
+├── club/service/
+│   └── ClubServiceTest.java
+├── common/exception/
+│   └── GlobalExceptionHandlerTest.java
+├── config/
+│   ├── JwtAuthenticationFilterTest.java
+│   └── JwtServiceTest.java
+└── storage/
+    ├── enums/
+    │   └── FileTypeTest.java
+    └── LocalFileStorageTest.java

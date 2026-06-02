@@ -52,10 +52,16 @@ src/
 │   │   │   ├── controller/ClubController.java   # CRUD /api/v1/clubs
 │   │   │   ├── dto/ (CreateClubRequest, UpdateClubRequest, ClubResponse)
 │   │   │   └── service/ClubService.java
+│   │   ├── team/
+│   │   │   ├── controller/TeamController.java   # CRUD /api/v1/clubs/{clubId}/teams
+│   │   │   ├── dto/ (CreateTeamRequest, UpdateTeamRequest, TeamResponse, CoachResponse, AssignCoachRequest)
+│   │   │   ├── entity/ (Team.java, TeamCoach.java)
+│   │   │   ├── repository/ (TeamRepository.java, TeamCoachRepository.java)
+│   │   │   └── service/TeamService.java
 │   │   ├── storage/
 │   │   │   ├── FileStorage.java                 # Интерфейс файлового хранилища
 │   │   │   ├── LocalFileStorage.java            # Локальная реализация
-│   │   │   └── enums/FileType.java              # Типы файлов (CLUB_LOGO, USER_AVATAR)
+│   │   │   └── enums/FileType.java              # Типы файлов (CLUB_LOGO, USER_AVATAR, TEAM_LOGO)
 │   │   ├── common/exception/
 │   │   │   └── GlobalExceptionHandler.java
 │   │   ├── config/
@@ -71,14 +77,23 @@ src/
 │       └── application.properties
 ├── test/
 │   ├── java/com/par/jbfh/
-│   │   ├── AbstractIntegrationTest.java
-│   │   ├── JbfhApplicationTests.java
-│   │   ├── auth/
-│   │   │   ├── controller/RoleControllerTest.java
-│   │   │   └── service/RoleServiceTest.java
-│   │   └── example/controller/
-│   │       ├── AdminControllerTest.java
-│   │       └── CoachControllerTest.java
+│   │   ├── auth/service/
+│   │   │   ├── RoleServiceTest.java
+│   │   │   ├── UserInitServiceTest.java
+│   │   │   └── UserServiceTest.java
+│   │   ├── club/service/
+│   │   │   └── ClubServiceTest.java
+│   │   ├── team/service/
+│   │   │   └── TeamServiceTest.java
+│   │   ├── common/exception/
+│   │   │   └── GlobalExceptionHandlerTest.java
+│   │   ├── config/
+│   │   │   ├── JwtAuthenticationFilterTest.java
+│   │   │   └── JwtServiceTest.java
+│   │   └── storage/
+│   │       ├── enums/
+│   │       │   └── FileTypeTest.java
+│   │       └── LocalFileStorageTest.java
 │   └── resources/
 │       ├── application.properties
 │       └── testcontainers.properties
@@ -119,6 +134,21 @@ src/
 | `GET` | `/api/v1/users/{id}` | `ROLE_ADMIN` | Получить пользователя по ID |
 | `PUT` | `/api/v1/users/me/password` | Любой аутентифицированный | Сменить свой пароль (требуется oldPassword) |
 | `PUT` | `/api/v1/users/{id}/password` | `ROLE_ADMIN` | Сменить пароль любому пользователю (админ) |
+
+### Управление командами
+
+| Метод | URL | Роль | Описание |
+|-------|-----|------|----------|
+| `POST` | `/api/v1/clubs/{clubId}/teams` | `ROLE_CLUB` | Создать команду |
+| `GET` | `/api/v1/clubs/{clubId}/teams?page=0&size=18` | `ROLE_CLUB`, `ROLE_CLUB_METHODIST`, `ROLE_COACH`, `ROLE_MAIN_COACH` | Список команд (пагинация, дефолт сортировка year DESC) |
+| `GET` | `/api/v1/clubs/{clubId}/teams/{id}` | `ROLE_CLUB`, `ROLE_CLUB_METHODIST`, `ROLE_COACH`, `ROLE_MAIN_COACH` | Детали команды |
+| `PUT` | `/api/v1/clubs/{clubId}/teams/{id}` | `ROLE_CLUB` | Обновить команду |
+| `PATCH` | `/api/v1/clubs/{clubId}/teams/{id}/active` | `ROLE_CLUB` | Активировать/деактивировать |
+| `POST` | `/api/v1/clubs/{clubId}/teams/{id}/logo` | `ROLE_CLUB` | Загрузить/обновить логотип |
+| `GET` | `/api/v1/clubs/{clubId}/teams/{id}/logo` | `ROLE_CLUB`, `ROLE_CLUB_METHODIST`, `ROLE_COACH`, `ROLE_MAIN_COACH` | Получить логотип |
+| `GET` | `/api/v1/clubs/{clubId}/teams/{id}/coaches` | `ROLE_CLUB`, `ROLE_CLUB_METHODIST` | Список тренеров команды |
+| `POST` | `/api/v1/clubs/{clubId}/teams/{id}/coaches` | `ROLE_CLUB` | Назначить тренера |
+| `DELETE` | `/api/v1/clubs/{clubId}/teams/{id}/coaches/{userId}` | `ROLE_CLUB` | Убрать тренера |
 
 ### Примеры (демонстрация ролей)
 
@@ -161,6 +191,7 @@ src/
 |-----|----------|-------------|----------------------|
 | `CLUB_LOGO` | `uploads/logos/` | 200 KB | image/jpeg, image/png, image/webp, image/svg+xml, image/gif |
 | `USER_AVATAR` | `uploads/avatars/` | 1 MB | image/jpeg, image/png, image/webp |
+| `TEAM_LOGO` | `uploads/logos/teams/` | 200 KB | image/jpeg, image/png, image/webp, image/svg+xml, image/gif |
 
 ---
 

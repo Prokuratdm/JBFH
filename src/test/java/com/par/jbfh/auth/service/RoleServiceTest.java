@@ -12,8 +12,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -30,7 +31,7 @@ class RoleServiceTest {
     }
 
     @Test
-    void initRoles_shouldCreateMissingRoles() {
+    void initRolesShouldCreateMissingRoles() {
         when(roleRepository.findByName(anyString())).thenReturn(Optional.empty());
 
         roleService.initRoles();
@@ -39,7 +40,7 @@ class RoleServiceTest {
     }
 
     @Test
-    void initRoles_shouldNotCreateExistingRoles() {
+    void initRolesShouldSkipExistingRoles() {
         when(roleRepository.findByName(anyString())).thenReturn(Optional.of(new Role("ROLE_ADMIN")));
 
         roleService.initRoles();
@@ -48,48 +49,47 @@ class RoleServiceTest {
     }
 
     @Test
-    void getAllRoleNames_shouldReturnAllRoles() {
+    void getAllRoleNamesShouldReturnRoleNames() {
         when(roleRepository.findAll()).thenReturn(List.of(
                 new Role("ROLE_ADMIN"),
-                new Role("ROLE_CLUB"),
                 new Role("ROLE_COACH")
         ));
 
         List<String> roles = roleService.getAllRoleNames();
 
-        assertEquals(3, roles.size());
-        assertTrue(roles.contains("ROLE_ADMIN"));
-        assertTrue(roles.contains("ROLE_CLUB"));
-        assertTrue(roles.contains("ROLE_COACH"));
+        assertThat(roles).containsExactlyInAnyOrder("ROLE_ADMIN", "ROLE_COACH");
     }
 
     @Test
-    void findByName_shouldReturnRole() {
+    void findByNameShouldReturnRoleWhenExists() {
         Role role = new Role("ROLE_ADMIN");
         when(roleRepository.findByName("ROLE_ADMIN")).thenReturn(Optional.of(role));
 
         Role found = roleService.findByName("ROLE_ADMIN");
 
-        assertEquals("ROLE_ADMIN", found.getName());
+        assertThat(found).isEqualTo(role);
     }
 
     @Test
-    void findByName_shouldThrowWhenNotFound() {
-        when(roleRepository.findByName("ROLE_UNKNOWN")).thenReturn(Optional.empty());
+    void findByNameShouldThrowWhenNotFound() {
+        when(roleRepository.findByName("NONEXISTENT")).thenReturn(Optional.empty());
 
-        assertThrows(IllegalArgumentException.class, () -> roleService.findByName("ROLE_UNKNOWN"));
+        assertThatThrownBy(() -> roleService.findByName("NONEXISTENT"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Role not found: NONEXISTENT");
     }
 
     @Test
-    void getFixedRoles_shouldReturnAllSixRoles() {
+    void getFixedRolesShouldReturnAllSixRoles() {
         Set<String> fixedRoles = roleService.getFixedRoles();
 
-        assertEquals(6, fixedRoles.size());
-        assertTrue(fixedRoles.contains("ROLE_ADMIN"));
-        assertTrue(fixedRoles.contains("ROLE_CLUB"));
-        assertTrue(fixedRoles.contains("ROLE_METHODIST"));
-        assertTrue(fixedRoles.contains("ROLE_CLUB_METHODIST"));
-        assertTrue(fixedRoles.contains("ROLE_COACH"));
-        assertTrue(fixedRoles.contains("ROLE_MAIN_COACH"));
+        assertThat(fixedRoles).containsExactlyInAnyOrder(
+                "ROLE_ADMIN",
+                "ROLE_CLUB",
+                "ROLE_METHODIST",
+                "ROLE_CLUB_METHODIST",
+                "ROLE_COACH",
+                "ROLE_MAIN_COACH"
+        );
     }
 }

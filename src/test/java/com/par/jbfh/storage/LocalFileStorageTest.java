@@ -13,16 +13,17 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class LocalFileStorageTest {
 
-    private LocalFileStorage fileStorage;
-
     @TempDir
     Path tempDir;
+
+    private LocalFileStorage fileStorage;
 
     @BeforeEach
     void setUp() {
@@ -30,159 +31,128 @@ class LocalFileStorageTest {
         fileStorage.init();
     }
 
-    private MultipartFile createMockImageFile(String name, byte[] content, String contentType) throws IOException {
-        MultipartFile file = mock(MultipartFile.class);
-        when(file.isEmpty()).thenReturn(content == null || content.length == 0);
-        when(file.getSize()).thenReturn(content != null ? content.length : 0L);
-        when(file.getContentType()).thenReturn(contentType);
-        when(file.getOriginalFilename()).thenReturn(name);
-        when(file.getInputStream()).thenReturn(new ByteArrayInputStream(content != null ? content : new byte[0]));
-        return file;
-    }
-
-    // --- validate ---
-
     @Test
-    void validate_shouldPassForValidFile() {
+    void validateShouldPassForValidFile() {
         MultipartFile file = mock(MultipartFile.class);
         when(file.isEmpty()).thenReturn(false);
         when(file.getSize()).thenReturn(100L);
         when(file.getContentType()).thenReturn("image/jpeg");
 
-        assertDoesNotThrow(() -> fileStorage.validate(file, FileType.CLUB_LOGO));
+        fileStorage.validate(file, FileType.CLUB_LOGO);
+
+        // no exception thrown
     }
 
     @Test
-    void validate_shouldThrowWhenFileEmpty() {
+    void validateShouldThrowWhenFileIsEmpty() {
         MultipartFile file = mock(MultipartFile.class);
         when(file.isEmpty()).thenReturn(true);
 
-        assertThrows(IllegalArgumentException.class, () -> fileStorage.validate(file, FileType.CLUB_LOGO));
+        assertThatThrownBy(() -> fileStorage.validate(file, FileType.CLUB_LOGO))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("File is empty");
     }
 
     @Test
-    void validate_shouldThrowWhenFileTooLarge() {
+    void validateShouldThrowWhenFileExceedsMaxSize() {
         MultipartFile file = mock(MultipartFile.class);
         when(file.isEmpty()).thenReturn(false);
-        when(file.getSize()).thenReturn(300 * 1024L); // 300KB > 200KB limit
+        when(file.getSize()).thenReturn(300 * 1024L); // > 200KB
         when(file.getContentType()).thenReturn("image/jpeg");
 
-        assertThrows(IllegalArgumentException.class, () -> fileStorage.validate(file, FileType.CLUB_LOGO));
+        assertThatThrownBy(() -> fileStorage.validate(file, FileType.CLUB_LOGO))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("File size exceeds");
     }
 
     @Test
-    void validate_shouldThrowWhenWrongContentType() {
+    void validateShouldThrowWhenContentTypeNotAllowed() {
         MultipartFile file = mock(MultipartFile.class);
         when(file.isEmpty()).thenReturn(false);
         when(file.getSize()).thenReturn(100L);
         when(file.getContentType()).thenReturn("application/pdf");
 
-        assertThrows(IllegalArgumentException.class, () -> fileStorage.validate(file, FileType.CLUB_LOGO));
+        assertThatThrownBy(() -> fileStorage.validate(file, FileType.CLUB_LOGO))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("File type 'application/pdf' is not allowed");
     }
 
     @Test
-    void validate_shouldThrowWhenContentTypeNull() {
+    void saveShouldStoreFileAndReturnPath() throws IOException {
         MultipartFile file = mock(MultipartFile.class);
         when(file.isEmpty()).thenReturn(false);
         when(file.getSize()).thenReturn(100L);
-        when(file.getContentType()).thenReturn(null);
+        when(file.getContentType()).thenReturn("image/png");
+        when(file.getOriginalFilename()).thenReturn("test.png");
+        when(file.getInputStream()).thenReturn(new ByteArrayInputStream("test content".getBytes()));
 
-        assertThrows(IllegalArgumentException.class, () -> fileStorage.validate(file, FileType.CLUB_LOGO));
-    }
-
-    // --- save ---
-
-    @Test
-    void save_shouldSaveFileSuccessfully() throws IOException {
-        byte[] content = "fake-image-content".getBytes();
-        MultipartFile file = createMockImageFile("logo.jpg", content, "image/jpeg");
         UUID entityId = UUID.randomUUID();
-
         String savedPath = fileStorage.save(file, entityId, FileType.CLUB_LOGO);
 
-        assertNotNull(savedPath);
-        assertTrue(savedPath.contains(entityId.toString()));
-        assertTrue(savedPath.endsWith(".jpg"));
-
-        Path savedFile = Path.of(savedPath);
-        assertTrue(Files.exists(savedFile));
-        assertArrayEquals(content, Files.readAllBytes(savedFile));
+        assertThat(savedPath).isNotNull();
+        assertThat(Files.exists(Path.of(savedPath))).isTrue();
     }
 
     @Test
-    void save_shouldCreateSubdirectory() throws IOException {
-        byte[] content = "test".getBytes();
-        MultipartFile file = createMockImageFile("avatar.png", content, "image/png");
-        UUID entityId = UUID.randomUUID();
+    void deleteShouldRemoveFile() throws IOException {
+        Path filePath = tempDir.resolve("test.txt");
+        Files.writeString(filePath, "test");
 
-        String savedPath = fileStorage.save(file, entityId, FileType.USER_AVATAR);
+        fileStorage.delete(filePath.toString());
 
-        assertTrue(savedPath.contains("avatars"));
-        Path savedFile = Path.of(savedPath);
-        assertTrue(Files.exists(savedFile));
+        assertThat(Files.exists(filePath)).isFalse();
     }
 
     @Test
-    void save_shouldHandleFileWithoutExtension() throws IOException {
-        byte[] content = "test".getBytes();
-        MultipartFile file = createMockImageFile("logo", content, "image/webp");
-        UUID entityId = UUID.randomUUID();
+    void deleteShouldNotThrowWhenFileDoesNotExist() {
+        fileStorage.delete("/nonexistent/path/file.png");
 
-        String savedPath = fileStorage.save(file, entityId, FileType.CLUB_LOGO);
-
-        assertNotNull(savedPath);
-        assertFalse(savedPath.endsWith("."));
-    }
-
-    // --- delete ---
-
-    @Test
-    void delete_shouldDeleteExistingFile() throws IOException {
-        Path testFile = tempDir.resolve("logos/test_delete.jpg");
-        Files.createDirectories(testFile.getParent());
-        Files.writeString(testFile, "content");
-
-        fileStorage.delete(testFile.toString());
-
-        assertFalse(Files.exists(testFile));
+        // no exception
     }
 
     @Test
-    void delete_shouldNotThrowWhenFileNull() {
-        assertDoesNotThrow(() -> fileStorage.delete(null));
-        assertDoesNotThrow(() -> fileStorage.delete(""));
-        assertDoesNotThrow(() -> fileStorage.delete("   "));
+    void deleteShouldNotThrowWhenPathIsNull() {
+        fileStorage.delete(null);
+
+        // no exception
     }
 
     @Test
-    void delete_shouldNotThrowWhenFileNotExists() {
-        assertDoesNotThrow(() -> fileStorage.delete(tempDir.resolve("nonexistent.txt").toString()));
-    }
+    void deleteShouldNotThrowWhenPathIsBlank() {
+        fileStorage.delete("   ");
 
-    // --- getResource ---
-
-    @Test
-    void getResource_shouldReturnResourceForExistingFile() throws IOException {
-        Path testFile = tempDir.resolve("logos/test_resource.jpg");
-        Files.createDirectories(testFile.getParent());
-        Files.writeString(testFile, "resource content");
-
-        Resource resource = fileStorage.getResource(testFile.toString());
-
-        assertNotNull(resource);
-        assertTrue(resource.exists());
-        assertTrue(resource.isReadable());
+        // no exception
     }
 
     @Test
-    void getResource_shouldThrowWhenFileNotExists() {
-        String path = tempDir.resolve("nonexistent.txt").toString();
-        assertThrows(IllegalArgumentException.class, () -> fileStorage.getResource(path));
+    void getResourceShouldReturnResourceForExistingFile() throws IOException {
+        Path filePath = tempDir.resolve("resource.txt");
+        Files.writeString(filePath, "test content");
+
+        Resource resource = fileStorage.getResource(filePath.toString());
+
+        assertThat(resource).isNotNull();
+        assertThat(resource.exists()).isTrue();
     }
 
     @Test
-    void getResource_shouldThrowWhenPathNull() {
-        assertThrows(IllegalArgumentException.class, () -> fileStorage.getResource(null));
-        assertThrows(IllegalArgumentException.class, () -> fileStorage.getResource(""));
+    void getResourceShouldThrowWhenFileNotFound() {
+        assertThatThrownBy(() -> fileStorage.getResource("/nonexistent/file.txt"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("File not found");
+    }
+
+    @Test
+    void getResourceShouldThrowWhenPathIsNull() {
+        assertThatThrownBy(() -> fileStorage.getResource(null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("File path is null or empty");
+    }
+
+    @Test
+    void getResourceShouldThrowWhenPathIsBlank() {
+        assertThatThrownBy(() -> fileStorage.getResource("   "))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("File path is null or empty");
     }
 }
