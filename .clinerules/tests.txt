@@ -1,0 +1,6 @@
+# Mandatory Unit Testing Rule
+- Whenever you create a new code file or modify an existing one, you MUST write or update corresponding unit tests in the same session.
+- Writing production code without accompanying unit tests is strictly forbidden.
+- Do not ask the user if you should write tests; do it automatically as part of the implementation.
+- Place test files according to the project's established structure.
+- Ensure test files cover main success paths and edge cases for the new/modified code.

@@ -1,0 +1,4 @@
+# Terminal Command Rules
+- Do not use `cd` to navigate directories for executing commands.
+- Execute all commands directly from the current working directory.
+- Specify paths to files or folders directly inside the arguments of the command.

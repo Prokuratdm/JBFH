@@ -1,11 +1,9 @@
 package com.par.jbfh.auth.controller;
 
-import com.par.jbfh.config.JwtService;
+import com.par.jbfh.ControllerTest;
 import com.par.jbfh.auth.service.RoleService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -15,7 +13,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(RoleController.class)
+@ControllerTest(RoleController.class)
 class RoleControllerTest {
 
     @Autowired
@@ -23,9 +21,6 @@ class RoleControllerTest {
 
     @MockitoBean
     private RoleService roleService;
-
-    @MockitoBean
-    private JwtService jwtService;
 
     @Test
     void getAllRoles_shouldReturnRoles() throws Exception {
