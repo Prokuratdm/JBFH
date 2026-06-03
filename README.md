@@ -176,13 +176,24 @@ src/
 
 | Метод | URL | Роль | Описание |
 |-------|-----|------|----------|
-| `POST` | `/api/v1/exercises` | Все аутентифицированные | Создать упражнение (с inventoryIds) |
-| `GET` | `/api/v1/exercises?page=0&size=20&active=true` | Все аутентифицированные | Список (админ/методист — все; остальные — общие + своего клуба) |
+| `GET` | `/api/v1/exercises/types` | Публичный | Список типов упражнений (ICE, LAND) |
+| `POST` | `/api/v1/exercises` | Все аутентифицированные | Создать упражнение (обязательно type: ICE/LAND) |
+| `GET` | `/api/v1/exercises?page=0&size=20&active=true&type=ICE` | Все аутентифицированные | Список (фильтр по типу опционально) |
 | `GET` | `/api/v1/exercises/{id}` | Все аутентифицированные | Детали |
 | `PUT` | `/api/v1/exercises/{id}` | `ROLE_ADMIN`, `ROLE_METHODIST`, `ROLE_CLUB`, `ROLE_CLUB_METHODIST` | Обновить |
 | `PATCH` | `/api/v1/exercises/{id}/active` | `ROLE_ADMIN`, `ROLE_METHODIST`, `ROLE_CLUB`, `ROLE_CLUB_METHODIST` | Деактивировать/активировать |
 | `POST` | `/api/v1/exercises/{id}/picture` | `ROLE_ADMIN`, `ROLE_METHODIST`, `ROLE_CLUB`, `ROLE_CLUB_METHODIST` | Загрузить картинку |
 | `GET` | `/api/v1/exercises/{id}/picture` | Все аутентифицированные | Получить картинку |
+
+### Локации клубов
+
+| Метод | URL | Роль | Описание |
+|-------|-----|------|----------|
+| `POST` | `/api/v1/clubs/{clubId}/locations` | `ROLE_CLUB` | Создать локацию |
+| `GET` | `/api/v1/clubs/{clubId}/locations?includeInactive=false` | `ROLE_ADMIN`, `ROLE_METHODIST`, `ROLE_CLUB`, `ROLE_CLUB_METHODIST`, `ROLE_COACH`, `ROLE_MAIN_COACH` | Список локаций (без пагинации) |
+| `GET` | `/api/v1/clubs/{clubId}/locations/{id}` | Те же | Детали локации |
+| `PUT` | `/api/v1/clubs/{clubId}/locations/{id}` | `ROLE_CLUB` | Обновить локацию |
+| `PATCH` | `/api/v1/clubs/{clubId}/locations/{id}/active` | `ROLE_CLUB` | Деактивировать/активировать |
 
 ### Примеры (демонстрация ролей)
 

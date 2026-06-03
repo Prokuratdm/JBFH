@@ -10,6 +10,7 @@ import com.par.jbfh.exercise.dto.ExerciseResponse;
 import com.par.jbfh.exercise.dto.UpdateExerciseRequest;
 import com.par.jbfh.exercise.entity.Exercise;
 import com.par.jbfh.exercise.entity.ExerciseInventory;
+import com.par.jbfh.exercise.enums.ExerciseType;
 import com.par.jbfh.exercise.repository.ExerciseInventoryRepository;
 import com.par.jbfh.exercise.repository.ExerciseRepository;
 import com.par.jbfh.inventory.entity.Inventory;
@@ -21,12 +22,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -54,6 +57,7 @@ public class ExerciseService {
         Exercise exercise = new Exercise();
         exercise.setName(request.getName());
         exercise.setDescription(request.getDescription());
+        exercise.setType(request.getType());
         exercise.setActive(true);
 
         if (isAdminOrMethodist) {
@@ -71,41 +75,45 @@ public class ExerciseService {
 
         exercise = exerciseRepository.save(exercise);
 
-        // Assign inventory items
         if (request.getInventoryIds() != null && !request.getInventoryIds().isEmpty()) {
             for (UUID inventoryId : request.getInventoryIds()) {
                 Inventory inventory = inventoryRepository.findById(inventoryId)
                         .orElseThrow(() -> new IllegalArgumentException("Inventory not found: " + inventoryId));
-                ExerciseInventory ei = new ExerciseInventory(exercise, inventory);
-                exerciseInventoryRepository.save(ei);
+                exerciseInventoryRepository.save(new ExerciseInventory(exercise, inventory));
             }
         }
 
-        log.info("Created exercise '{}'", exercise.getName());
+        log.info("Created exercise '{}' (type={})", exercise.getName(), exercise.getType());
         return toExerciseResponse(exercise);
     }
 
     @Transactional(readOnly = true)
-    public Page<ExerciseResponse> getAll(boolean activeOnly, Pageable pageable) {
+    public Page<ExerciseResponse> getAll(boolean activeOnly, ExerciseType type, Pageable pageable) {
         User currentUser = getCurrentUser();
         boolean isAdminOrMethodist = hasRole(currentUser, "ROLE_ADMIN") || hasRole(currentUser, "ROLE_METHODIST");
 
-        Page<Exercise> page;
-        if (isAdminOrMethodist) {
-            page = activeOnly
-                    ? exerciseRepository.findByActiveTrue(pageable)
-                    : exerciseRepository.findAll(pageable);
-        } else {
+        Specification<Exercise> spec = (root, query, cb) -> cb.conjunction();
+
+        if (activeOnly) {
+            spec = spec.and((root, query, cb) -> cb.isTrue(root.get("active")));
+        }
+        if (type != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("type"), type));
+        }
+
+        if (!isAdminOrMethodist) {
             UUID clubId = currentUser.getClub() != null ? currentUser.getClub().getId() : null;
             if (clubId == null) {
                 return Page.empty(pageable);
             }
-            page = activeOnly
-                    ? exerciseRepository.findVisibleForClub(clubId, pageable)
-                    : exerciseRepository.findAllVisibleForClub(clubId, pageable);
+            UUID finalClubId = clubId;
+            spec = spec.and((root, query, cb) -> cb.or(
+                    cb.isNull(root.get("club").get("id")),
+                    cb.equal(root.get("club").get("id"), finalClubId)
+            ));
         }
 
-        return page.map(this::toExerciseResponse);
+        return exerciseRepository.findAll(spec, pageable).map(this::toExerciseResponse);
     }
 
     @Transactional(readOnly = true)
@@ -129,14 +137,15 @@ public class ExerciseService {
         if (request.getDescription() != null) {
             exercise.setDescription(request.getDescription());
         }
+        if (request.getType() != null) {
+            exercise.setType(request.getType());
+        }
         if (request.getInventoryIds() != null) {
-            // Replace existing inventory assignments
             exerciseInventoryRepository.deleteByExerciseId(id);
             for (UUID inventoryId : request.getInventoryIds()) {
                 Inventory inventory = inventoryRepository.findById(inventoryId)
                         .orElseThrow(() -> new IllegalArgumentException("Inventory not found: " + inventoryId));
-                ExerciseInventory ei = new ExerciseInventory(exercise, inventory);
-                exerciseInventoryRepository.save(ei);
+                exerciseInventoryRepository.save(new ExerciseInventory(exercise, inventory));
             }
         }
 
@@ -184,6 +193,12 @@ public class ExerciseService {
         return fileStorage.getResource(exercise.getPicturePath());
     }
 
+    public List<String> getTypes() {
+        return Arrays.stream(ExerciseType.values())
+                .map(ExerciseType::name)
+                .toList();
+    }
+
     private ExerciseResponse toExerciseResponse(Exercise exercise) {
         List<UUID> inventoryIds = exerciseInventoryRepository.findByExerciseId(exercise.getId()).stream()
                 .map(ei -> ei.getInventory().getId())
@@ -197,6 +212,7 @@ public class ExerciseService {
                 exercise.getId(),
                 exercise.getName(),
                 exercise.getDescription(),
+                exercise.getType(),
                 pictureUrl,
                 exercise.isActive(),
                 exercise.getClub() != null ? exercise.getClub().getId() : null,

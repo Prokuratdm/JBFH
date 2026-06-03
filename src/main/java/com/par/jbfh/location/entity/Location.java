@@ -1,7 +1,6 @@
-package com.par.jbfh.exercise.entity;
+package com.par.jbfh.location.entity;
 
 import com.par.jbfh.auth.entity.Club;
-import com.par.jbfh.exercise.enums.ExerciseType;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -11,31 +10,23 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "exercises")
+@Table(name = "locations", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"name", "club_id"})
+})
 @Getter
 @Setter
 @NoArgsConstructor
-public class Exercise {
+public class Location {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false, unique = true, length = 255)
+    @Column(nullable = false, length = 255)
     private String name;
 
-    @Column(length = 2000)
-    private String description;
-
-    @Column(name = "picture_path", length = 500)
-    private String picturePath;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 50)
-    private ExerciseType type;
-
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "club_id")
+    @JoinColumn(name = "club_id", nullable = false)
     private Club club;
 
     @Column(nullable = false)

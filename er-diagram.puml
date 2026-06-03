@@ -1,0 +1,116 @@
+@startuml JBFH_ER_Diagram
+!theme plain
+skinparam linetype ortho
+skinparam entityBackgroundColor #FEFECE
+skinparam entityBorderColor #A80036
+
+entity "clubs" as club {
+  * id : UUID <<PK>>
+  --
+  * name : VARCHAR(255) <<unique>>
+  address : VARCHAR(500)
+  description : VARCHAR(2000)
+  logo_path : VARCHAR(500)
+  * created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+}
+
+entity "users" as user {
+  * id : UUID <<PK>>
+  --
+  * username : VARCHAR(100) <<unique>>
+  * password : VARCHAR(255)
+  email : VARCHAR(255)
+  * enabled : BOOLEAN
+  club_id : UUID <<FK nullable>>
+  * created_at : TIMESTAMP
+}
+
+entity "roles" as role {
+  * id : UUID <<PK>>
+  --
+  * name : VARCHAR(255) <<unique>>
+}
+
+entity "user_roles" as user_roles {
+  * user_id : UUID <<FK>>
+  * role_id : UUID <<FK>>
+}
+
+entity "teams" as team {
+  * id : UUID <<PK>>
+  --
+  * name : VARCHAR(255)
+  * year : INTEGER
+  description : VARCHAR(2000)
+  logo_path : VARCHAR(500)
+  * active : BOOLEAN
+  * club_id : UUID <<FK>>
+  * created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+}
+
+entity "team_coaches" as team_coach {
+  * id : UUID <<PK>>
+  --
+  * team_id : UUID <<FK>>
+  * user_id : UUID <<FK>>
+}
+
+entity "inventory" as inventory {
+  * id : UUID <<PK>>
+  --
+  * name : VARCHAR(255)
+  club_id : UUID <<FK nullable>>
+  * active : BOOLEAN
+  * created_at : TIMESTAMP
+}
+
+entity "exercises" as exercise {
+  * id : UUID <<PK>>
+  --
+  * name : VARCHAR(255) <<unique>>
+  description : VARCHAR(2000)
+  * type : VARCHAR(50)  { ICE | LAND }
+  picture_path : VARCHAR(500)
+  club_id : UUID <<FK nullable>>
+  * active : BOOLEAN
+  * created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+}
+
+entity "exercise_inventory" as ex_inv {
+  * id : UUID <<PK>>
+  --
+  * exercise_id : UUID <<FK>>
+  * inventory_id : UUID <<FK>>
+}
+
+entity "locations" as location {
+  * id : UUID <<PK>>
+  --
+  * name : VARCHAR(255)
+  * club_id : UUID <<FK>>
+  * active : BOOLEAN
+  * created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+}
+
+' === Relationships ===
+
+club ||--o{ user : "has"
+club ||--o{ team : "has"
+club ||--o{ inventory : "has (nullable)"
+club ||--o{ exercise : "has (nullable)"
+club ||--o{ location : "has"
+
+user ||--o{ user_roles : "has"
+role ||--o{ user_roles : "assigned"
+user ||--o{ team_coach : "coaches"
+
+team ||--o{ team_coach : "has coaches"
+
+exercise ||--o{ ex_inv : "requires"
+inventory ||--o{ ex_inv : "used in"
+
+@enduml

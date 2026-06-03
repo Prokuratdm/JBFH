@@ -1,5 +1,7 @@
 package com.par.jbfh.exercise.dto;
 
+import com.par.jbfh.exercise.enums.ExerciseType;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -8,6 +10,7 @@ public record ExerciseResponse(
         UUID id,
         String name,
         String description,
+        ExerciseType type,
         String pictureUrl,
         boolean active,
         UUID clubId,

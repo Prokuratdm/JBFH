@@ -20,6 +20,9 @@ import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.par.jbfh.exercise.enums.ExerciseType;
+
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -38,13 +41,20 @@ public class ExerciseController {
         return exerciseService.create(request);
     }
 
+    @GetMapping("/types")
+    @Operation(summary = "Get exercise types", description = "Returns list of available exercise types (ICE, LAND).")
+    public List<String> getTypes() {
+        return exerciseService.getTypes();
+    }
+
     @GetMapping
     @Secured({"ROLE_ADMIN", "ROLE_METHODIST", "ROLE_CLUB", "ROLE_CLUB_METHODIST", "ROLE_COACH", "ROLE_MAIN_COACH"})
-    @Operation(summary = "Get all exercises", description = "Returns paginated list. Admins/methodists see all; others see global + their club's.")
+    @Operation(summary = "Get all exercises", description = "Returns paginated list. Admins/methodists see all; others see global + their club's. Optional type filter.")
     public Page<ExerciseResponse> getAll(
             @RequestParam(defaultValue = "true") boolean active,
+            @RequestParam(required = false) ExerciseType type,
             @PageableDefault(size = 20) Pageable pageable) {
-        return exerciseService.getAll(active, pageable);
+        return exerciseService.getAll(active, type, pageable);
     }
 
     @GetMapping("/{id}")

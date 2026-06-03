@@ -10,9 +10,9 @@ import com.par.jbfh.exercise.dto.CreateExerciseRequest;
 import com.par.jbfh.exercise.dto.ExerciseResponse;
 import com.par.jbfh.exercise.dto.UpdateExerciseRequest;
 import com.par.jbfh.exercise.entity.Exercise;
+import com.par.jbfh.exercise.enums.ExerciseType;
 import com.par.jbfh.exercise.repository.ExerciseInventoryRepository;
 import com.par.jbfh.exercise.repository.ExerciseRepository;
-import com.par.jbfh.inventory.entity.Inventory;
 import com.par.jbfh.inventory.repository.InventoryRepository;
 import com.par.jbfh.storage.FileStorage;
 import org.junit.jupiter.api.AfterEach;
@@ -95,6 +95,7 @@ class ExerciseServiceTest {
         CreateExerciseRequest request = new CreateExerciseRequest();
         request.setName("Упражнение 1");
         request.setDescription("Описание");
+        request.setType(ExerciseType.ICE);
 
         when(exerciseRepository.existsByName("Упражнение 1")).thenReturn(false);
         when(exerciseRepository.save(any(Exercise.class))).thenAnswer(inv -> {
@@ -107,6 +108,7 @@ class ExerciseServiceTest {
         ExerciseResponse response = exerciseService.create(request);
 
         assertThat(response.name()).isEqualTo("Упражнение 1");
+        assertThat(response.type()).isEqualTo(ExerciseType.ICE);
         assertThat(response.active()).isTrue();
         assertThat(response.clubId()).isEqualTo(clubId);
     }
@@ -117,6 +119,7 @@ class ExerciseServiceTest {
 
         CreateExerciseRequest request = new CreateExerciseRequest();
         request.setName("Duplicate");
+        request.setType(ExerciseType.ICE);
 
         when(exerciseRepository.existsByName("Duplicate")).thenReturn(true);
 
@@ -134,13 +137,15 @@ class ExerciseServiceTest {
         Exercise ex = new Exercise();
         ex.setId(UUID.randomUUID());
         ex.setName("Ex");
+        ex.setType(ExerciseType.ICE);
         ex.setActive(true);
         Page<Exercise> page = new PageImpl<>(List.of(ex));
 
-        when(exerciseRepository.findByActiveTrue(any())).thenReturn(page);
+        when(exerciseRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(page);
         when(exerciseInventoryRepository.findByExerciseId(any())).thenReturn(List.of());
 
-        Page<ExerciseResponse> result = exerciseService.getAll(true, PageRequest.of(0, 20));
+        Page<ExerciseResponse> result = exerciseService.getAll(true, null, PageRequest.of(0, 20));
 
         assertThat(result.getContent()).hasSize(1);
     }
@@ -151,6 +156,7 @@ class ExerciseServiceTest {
         Exercise ex = new Exercise();
         ex.setId(id);
         ex.setName("Ex");
+        ex.setType(ExerciseType.LAND);
         ex.setActive(true);
 
         when(exerciseRepository.findById(id)).thenReturn(Optional.of(ex));
@@ -159,28 +165,27 @@ class ExerciseServiceTest {
         ExerciseResponse response = exerciseService.getById(id);
 
         assertThat(response.name()).isEqualTo("Ex");
+        assertThat(response.type()).isEqualTo(ExerciseType.LAND);
     }
 
     @Test
-    void updateShouldUpdateFields() {
+    void updateShouldUpdateType() {
         UUID id = UUID.randomUUID();
         Exercise ex = new Exercise();
         ex.setId(id);
         ex.setName("Old");
-        ex.setDescription("Old desc");
+        ex.setType(ExerciseType.ICE);
 
         when(exerciseRepository.findById(id)).thenReturn(Optional.of(ex));
         when(exerciseRepository.save(any())).thenReturn(ex);
         when(exerciseInventoryRepository.findByExerciseId(id)).thenReturn(List.of());
 
         UpdateExerciseRequest request = new UpdateExerciseRequest();
-        request.setName("New");
-        request.setDescription("New desc");
+        request.setType(ExerciseType.LAND);
 
         ExerciseResponse response = exerciseService.update(id, request);
 
-        assertThat(response.name()).isEqualTo("New");
-        assertThat(response.description()).isEqualTo("New desc");
+        assertThat(response.type()).isEqualTo(ExerciseType.LAND);
     }
 
     @Test
@@ -189,6 +194,7 @@ class ExerciseServiceTest {
         Exercise ex = new Exercise();
         ex.setId(id);
         ex.setName("Ex");
+        ex.setType(ExerciseType.ICE);
         ex.setActive(true);
 
         when(exerciseRepository.findById(id)).thenReturn(Optional.of(ex));
@@ -198,5 +204,12 @@ class ExerciseServiceTest {
         ExerciseResponse response = exerciseService.setActive(id, false);
 
         assertThat(response.active()).isFalse();
+    }
+
+    @Test
+    void getTypesShouldReturnIceAndLand() {
+        List<String> types = exerciseService.getTypes();
+
+        assertThat(types).containsExactly("ICE", "LAND");
     }
 }

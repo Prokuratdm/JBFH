@@ -12,6 +12,7 @@ com.par.jbfh/
 ├── team/          — Управление командами (CRUD, логотипы, назначение тренеров)
 ├── inventory/     — Конструктор: инвентарь (CRUD, общий/клубный)
 ├── exercise/      — Конструктор: упражнения (CRUD, картинки, привязка инвентаря)
+├── location/      — Локации клубов (CRUD, вложены в клуб)
 ├── storage/       — Файловое хранилище (интерфейс + LocalFileStorage + FileType enum)
 ├── config/        — Spring Security, JWT, Swagger конфигурации
 ├── example/       — Примеры контроллеров для демонстрации @Secured
@@ -126,7 +127,7 @@ app.upload.base-path=uploads
 ## Database
 - PostgreSQL via Docker Compose
 - JPA ddl-auto=update (tables created automatically)
-- Tables: users, roles, user_roles, clubs, teams, team_coaches, inventory, exercises, exercise_inventory
+- Tables: users, roles, user_roles, clubs, teams, team_coaches, inventory, exercises, exercise_inventory, locations
 
 ## Teams (package: team/)
 
@@ -188,7 +189,7 @@ app.upload.base-path=uploads
 ## Exercises (package: exercise/)
 
 ### Entities
-- **Exercise** — id, name (unique), description, picturePath, club (ManyToOne, nullable = общее), active (boolean, default true), createdAt, updatedAt.
+- **Exercise** — id, name (unique), description, type (ExerciseType enum: ICE/LAND), picturePath, club (ManyToOne, nullable = общее), active (boolean, default true), createdAt, updatedAt.
 - **ExerciseInventory** — id, exercise (ManyToOne), inventory (ManyToOne). Unique constraint: (exercise_id, inventory_id). Many-to-many связь упражнений с требуемым инвентарём.
 
 ### API Endpoints (все требуют аутентификации)
@@ -209,6 +210,9 @@ app.upload.base-path=uploads
 
 ### Exercise Creation Logic
 - Названия упражнений глобально уникальны (unique constraint на name)
+- Поле type обязательно — ICE (лёд) или LAND (земля)
+- Фильтрация по типу: `GET /api/v1/exercises?type=ICE`
+- Ручка `GET /api/v1/exercises/types` возвращает список доступных типов (публичная)
 - При создании/обновлении можно указать список inventoryIds — требуемый инвентарь
 - Картинка загружается отдельным запросом (FileType: EXERCISE_PICTURE, max 500KB)
 - Удаление запрещено — только деактивация
