@@ -19,6 +19,10 @@ public class CreateExerciseRequest {
     @NotNull
     private ExerciseType type;
 
+    private String url;
+
+    private String content;
+
     private List<UUID> inventoryIds;
 
     private UUID clubId;

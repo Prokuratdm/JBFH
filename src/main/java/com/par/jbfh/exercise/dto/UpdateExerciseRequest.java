@@ -15,5 +15,9 @@ public class UpdateExerciseRequest {
 
     private ExerciseType type;
 
+    private String url;
+
+    private String content;
+
     private List<UUID> inventoryIds;
 }

@@ -129,6 +129,7 @@ public class UserService {
                 user.getRoles().stream().map(Role::getName).collect(Collectors.toSet()),
                 user.getClub() != null ? user.getClub().getId() : null,
                 user.getClub() != null ? user.getClub().getName() : null,
+                user.getLastSeenAt(),
                 user.getCreatedAt()
         );
     }

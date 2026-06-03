@@ -1,5 +1,6 @@
 package com.par.jbfh.config;
 
+import com.par.jbfh.auth.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,6 +28,9 @@ class JwtAuthenticationFilterTest {
     private JwtService jwtService;
 
     @Mock
+    private UserRepository userRepository;
+
+    @Mock
     private HttpServletRequest request;
 
     @Mock
@@ -39,7 +43,7 @@ class JwtAuthenticationFilterTest {
 
     @BeforeEach
     void setUp() {
-        filter = new JwtAuthenticationFilter(jwtService);
+        filter = new JwtAuthenticationFilter(jwtService, userRepository);
         SecurityContextHolder.clearContext();
     }
 

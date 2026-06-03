@@ -96,6 +96,8 @@ class ExerciseServiceTest {
         request.setName("Упражнение 1");
         request.setDescription("Описание");
         request.setType(ExerciseType.ICE);
+        request.setUrl("https://example.com/video");
+        request.setContent("Методика выполнения упражнения");
 
         when(exerciseRepository.existsByName("Упражнение 1")).thenReturn(false);
         when(exerciseRepository.save(any(Exercise.class))).thenAnswer(inv -> {
@@ -111,6 +113,8 @@ class ExerciseServiceTest {
         assertThat(response.type()).isEqualTo(ExerciseType.ICE);
         assertThat(response.active()).isTrue();
         assertThat(response.clubId()).isEqualTo(clubId);
+        assertThat(response.url()).isEqualTo("https://example.com/video");
+        assertThat(response.content()).isEqualTo("Методика выполнения упражнения");
     }
 
     @Test
@@ -204,6 +208,28 @@ class ExerciseServiceTest {
         ExerciseResponse response = exerciseService.setActive(id, false);
 
         assertThat(response.active()).isFalse();
+    }
+
+    @Test
+    void updateShouldUpdateUrlAndContent() {
+        UUID id = UUID.randomUUID();
+        Exercise ex = new Exercise();
+        ex.setId(id);
+        ex.setName("Old");
+        ex.setType(ExerciseType.ICE);
+
+        when(exerciseRepository.findById(id)).thenReturn(Optional.of(ex));
+        when(exerciseRepository.save(any())).thenReturn(ex);
+        when(exerciseInventoryRepository.findByExerciseId(id)).thenReturn(List.of());
+
+        UpdateExerciseRequest request = new UpdateExerciseRequest();
+        request.setUrl("https://example.com/new-video");
+        request.setContent("Обновлённая методика");
+
+        ExerciseResponse response = exerciseService.update(id, request);
+
+        assertThat(response.url()).isEqualTo("https://example.com/new-video");
+        assertThat(response.content()).isEqualTo("Обновлённая методика");
     }
 
     @Test

@@ -23,6 +23,7 @@ entity "users" as user {
   email : VARCHAR(255)
   * enabled : BOOLEAN
   club_id : UUID <<FK nullable>>
+  last_seen_at : TIMESTAMP
   * created_at : TIMESTAMP
 }
 
@@ -73,6 +74,8 @@ entity "exercises" as exercise {
   description : VARCHAR(2000)
   * type : VARCHAR(50)  { ICE | LAND }
   picture_path : VARCHAR(500)
+  url : VARCHAR(500)
+  content : TEXT
   club_id : UUID <<FK nullable>>
   * active : BOOLEAN
   * created_at : TIMESTAMP
@@ -96,6 +99,123 @@ entity "locations" as location {
   updated_at : TIMESTAMP
 }
 
+entity "trainings" as training {
+  * id : UUID <<PK>>
+  --
+  * name : VARCHAR(255)
+  * date : DATE
+  * time_start : TIME
+  * time_end : TIME
+  * location_id : UUID <<FK>>
+  * team_id : UUID <<FK>>
+  picture_path : VARCHAR(500)
+  description : VARCHAR(2000)
+  task_1 : VARCHAR(1000)
+  task_2 : VARCHAR(1000)
+  task_3 : VARCHAR(1000)
+  source_template_id : UUID <<FK nullable>>
+  * created_by : UUID <<FK>>
+  * created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+}
+
+entity "training_exercises" as training_ex {
+  * id : UUID <<PK>>
+  --
+  * training_id : UUID <<FK>>
+  * exercise_id : UUID <<FK>>
+  * work_duration : INTEGER
+  * intensity : VARCHAR(50)
+  rest_duration : INTEGER
+  explanation_duration : INTEGER
+  work_mode : VARCHAR(50)
+  total_time : INTEGER
+  * load_level : VARCHAR(50)
+}
+
+entity "template_trainings" as template_training {
+  * id : UUID <<PK>>
+  --
+  * name : VARCHAR(255)
+  description : VARCHAR(2000)
+  picture_path : VARCHAR(500)
+  task_1 : VARCHAR(1000)
+  task_2 : VARCHAR(1000)
+  task_3 : VARCHAR(1000)
+  club_id : UUID <<FK nullable>>
+  * created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+}
+
+entity "template_training_exercises" as template_training_ex {
+  * id : UUID <<PK>>
+  --
+  * template_training_id : UUID <<FK>>
+  * exercise_id : UUID <<FK>>
+  * work_duration : INTEGER
+  * intensity : VARCHAR(50)
+  rest_duration : INTEGER
+  explanation_duration : INTEGER
+  work_mode : VARCHAR(50)
+  total_time : INTEGER
+  * load_level : VARCHAR(50)
+}
+
+entity "children" as child {
+  * id : UUID <<PK>>
+  --
+  * first_name : VARCHAR(100)
+  * last_name : VARCHAR(100)
+  middle_name : VARCHAR(100)
+  * birth_year : INTEGER
+  * gender : VARCHAR(10)
+  * team_id : UUID <<FK>>
+  * created_at : TIMESTAMP
+}
+
+entity "training_programs" as training_program {
+  * id : UUID <<PK>>
+  --
+  * birth_year : INTEGER
+  * load_level : VARCHAR(50)
+  * cycle : VARCHAR(20)
+  * percentage : DECIMAL(5,2)
+  club_id : UUID <<FK nullable>>
+  * created_at : TIMESTAMP
+}
+
+entity "standards" as standard {
+  * id : UUID <<PK>>
+  --
+  * name : VARCHAR(255)
+  * type : VARCHAR(50)
+  * birth_year : INTEGER
+  * unit : VARCHAR(20)
+  * control_value : DECIMAL(10,2)
+  club_id : UUID <<FK nullable>>
+  * created_at : TIMESTAMP
+}
+
+entity "child_standards" as child_standard {
+  * id : UUID <<PK>>
+  --
+  * child_id : UUID <<FK>>
+  * standard_id : UUID <<FK>>
+  * result_value : DECIMAL(10,2)
+  * date : DATE
+  * created_at : TIMESTAMP
+}
+
+entity "child_physical_stats" as child_stats {
+  * id : UUID <<PK>>
+  --
+  * child_id : UUID <<FK>>
+  * height : DECIMAL(5,1)
+  * weight : DECIMAL(5,1)
+  * date : DATE
+  * created_at : TIMESTAMP
+}
+
 ' === Relationships ===
 
 club ||--o{ user : "has"
@@ -103,14 +223,145 @@ club ||--o{ team : "has"
 club ||--o{ inventory : "has (nullable)"
 club ||--o{ exercise : "has (nullable)"
 club ||--o{ location : "has"
+club ||--o{ template_training : "has (nullable)"
+club ||--o{ training_program : "has (nullable)"
+club ||--o{ standard : "has (nullable)"
 
 user ||--o{ user_roles : "has"
 role ||--o{ user_roles : "assigned"
 user ||--o{ team_coach : "coaches"
 
 team ||--o{ team_coach : "has coaches"
+team ||--o{ training : "has"
+team ||--o{ child : "has"
+
+location ||--o{ training : "hosts"
+
+training ||--o{ training_ex : "contains"
+training }o--o| template_training : "created from"
 
 exercise ||--o{ ex_inv : "requires"
+exercise ||--o{ training_ex : "used in"
+exercise ||--o{ template_training_ex : "used in"
+
 inventory ||--o{ ex_inv : "used in"
+
+template_training ||--o{ template_training_ex : "contains"
+
+child ||--o{ child_standard : "results"
+child ||--o{ child_stats : "measurements"
+
+standard ||--o{ child_standard : "measured by"
+
+user ||--o{ training : "created"
+
+' === Enums ===
+
+enum "ExerciseType" as ex_type {
+  ICE
+  LAND
+}
+
+enum "FileType" as file_type {
+  CLUB_LOGO
+  USER_AVATAR
+  TEAM_LOGO
+  EXERCISE_PICTURE
+}
+
+enum "Roles" as roles_enum {
+  ROLE_ADMIN
+  ROLE_CLUB
+  ROLE_METHODIST
+  ROLE_CLUB_METHODIST
+  ROLE_COACH
+  ROLE_MAIN_COACH
+}
+
+enum "Intensity" as intensity {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum "LoadLevel" as load_level {
+  MAXIMUM
+  SUBMAXIMUM
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum "TrainingCycle" as training_cycle {
+  WEEK
+  MONTH
+  THREE_MONTHS
+  YEAR
+}
+
+enum "WorkMode" as work_mode {
+  INTERVAL
+  REPEATED
+  UNIFORM
+  ALTERNATING
+}
+
+enum "Gender" as gender {
+  MALE
+  FEMALE
+}
+
+enum "StandardUnit" as standard_unit {
+  SECONDS
+  MINUTES
+  CENTIMETERS
+  METERS
+}
+
+note bottom of exercise : uses ExerciseType enum
+note bottom of file_type : defines subdirectory,\nmax size, allowed MIME types
+note bottom of roles_enum : stored in "roles" table
+note bottom of intensity : интенсивность упражнения:\nВысокая, Средняя, Низкая
+note bottom of load_level : уровень нагрузки:\nМаксимальная, Субмаксимальная,\nВысокая, Средняя, Низкая
+note bottom of training_cycle : цикл программы обучения:\nНеделя, Месяц, 3 месяца, Год
+note bottom of work_mode : режим работы:\nопределяется автоматически
+note bottom of gender : пол: Мужской, Женский
+note bottom of standard_unit : единицы измерения норматива:\nСекунды, Минуты, Сантиметры, Метры
+
+note top of training_ex
+  rest_duration — рассчитывается автоматически\n
+  work_mode — определяется автоматически\n
+  total_time — рассчитывается автоматически\n
+  explanation_duration — хранится в секундах,\n
+  отображается в минутах
+end note
+
+note top of template_training_ex
+  поля как в training_exercises:\n
+  rest_duration, work_mode, total_time — авто\n
+  explanation_duration — сек → мин
+end note
+
+note top of training
+  source_template_id — ссылка на эталонную\n
+  тренировку, если создана из шаблона.\n
+  При копировании упражнения и задачи\n
+  копируются в training_exercises и tasks
+end note
+
+note top of training_program
+  percentage — процент данного load_level\n
+  в рамках cycle для указанного birth_year
+end note
+
+note top of standard
+  type — ExerciseType enum (ICE / LAND)\n
+  unit — StandardUnit enum\n
+  control_value — эталонное значение норматива
+end note
+
+note top of child
+  gender — Gender enum
+end note
 
 @enduml

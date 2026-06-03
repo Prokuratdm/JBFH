@@ -17,5 +17,6 @@ public class UserResponse {
     private Set<String> roles;
     private UUID clubId;
     private String clubName;
+    private LocalDateTime lastSeenAt;
     private LocalDateTime createdAt;
 }

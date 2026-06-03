@@ -12,6 +12,8 @@ public record ExerciseResponse(
         String description,
         ExerciseType type,
         String pictureUrl,
+        String url,
+        String content,
         boolean active,
         UUID clubId,
         String clubName,

@@ -70,6 +70,34 @@ src/
 │   │   │   ├── entity/ (Exercise.java, ExerciseInventory.java)
 │   │   │   ├── repository/ (ExerciseRepository.java, ExerciseInventoryRepository.java)
 │   │   │   └── service/ExerciseService.java
+│   │   ├── child/
+│   │   │   ├── controller/ (ChildController, ChildPhysicalStatsController, ChildStandardController)
+│   │   │   ├── dto/ (CreateChildRequest, UpdateChildRequest, ChildResponse, CreatePhysicalStatsRequest,
+│   │   │   │        PhysicalStatsResponse, CreateChildStandardRequest, ChildStandardResponse)
+│   │   │   ├── entity/ (Child.java, ChildPhysicalStats.java, ChildStandard.java)
+│   │   │   ├── enums/ (Gender.java)
+│   │   │   ├── repository/ (ChildRepository, ChildPhysicalStatsRepository, ChildStandardRepository)
+│   │   │   └── service/ (ChildService, ChildPhysicalStatsService, ChildStandardService)
+│   │   ├── standard/
+│   │   │   ├── controller/StandardController.java   # CRUD /api/v1/standards
+│   │   │   ├── dto/ (CreateStandardRequest, UpdateStandardRequest, StandardResponse)
+│   │   │   ├── entity/Standard.java
+│   │   │   ├── enums/StandardUnit.java
+│   │   │   ├── repository/StandardRepository.java
+│   │   │   └── service/StandardService.java
+│   │   ├── training/
+│   │   │   ├── controller/ (TrainingController, TrainingExerciseController,
+│   │   │   │               TemplateTrainingController, TrainingProgramController)
+│   │   │   ├── dto/ (CreateTrainingRequest, UpdateTrainingRequest, TrainingResponse,
+│   │   │   │        AddExerciseToTrainingRequest, TrainingExerciseResponse,
+│   │   │   │        CreateTemplateTrainingRequest, TemplateTrainingResponse,
+│   │   │   │        CreateTrainingProgramRequest, TrainingProgramResponse)
+│   │   │   ├── entity/ (Training.java, TrainingExercise.java, TemplateTraining.java,
+│   │   │   │           TemplateTrainingExercise.java, TrainingProgram.java)
+│   │   │   ├── enums/ (Intensity.java, LoadLevel.java, WorkMode.java, TrainingCycle.java)
+│   │   │   ├── repository/ (TrainingRepository, TrainingExerciseRepository,
+│   │   │   │               TemplateTrainingRepository, TrainingProgramRepository)
+│   │   │   └── service/ (TrainingService, TemplateTrainingService, TrainingProgramService)
 │   │   ├── storage/
 │   │   │   ├── FileStorage.java                 # Интерфейс файлового хранилища
 │   │   │   ├── LocalFileStorage.java            # Локальная реализация

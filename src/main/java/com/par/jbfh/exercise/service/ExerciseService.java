@@ -58,6 +58,8 @@ public class ExerciseService {
         exercise.setName(request.getName());
         exercise.setDescription(request.getDescription());
         exercise.setType(request.getType());
+        exercise.setUrl(request.getUrl());
+        exercise.setContent(request.getContent());
         exercise.setActive(true);
 
         if (isAdminOrMethodist) {
@@ -140,6 +142,12 @@ public class ExerciseService {
         if (request.getType() != null) {
             exercise.setType(request.getType());
         }
+        if (request.getUrl() != null) {
+            exercise.setUrl(request.getUrl());
+        }
+        if (request.getContent() != null) {
+            exercise.setContent(request.getContent());
+        }
         if (request.getInventoryIds() != null) {
             exerciseInventoryRepository.deleteByExerciseId(id);
             for (UUID inventoryId : request.getInventoryIds()) {
@@ -214,6 +222,8 @@ public class ExerciseService {
                 exercise.getDescription(),
                 exercise.getType(),
                 pictureUrl,
+                exercise.getUrl(),
+                exercise.getContent(),
                 exercise.isActive(),
                 exercise.getClub() != null ? exercise.getClub().getId() : null,
                 exercise.getClub() != null ? exercise.getClub().getName() : null,

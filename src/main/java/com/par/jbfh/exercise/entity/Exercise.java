@@ -30,6 +30,12 @@ public class Exercise {
     @Column(name = "picture_path", length = 500)
     private String picturePath;
 
+    @Column(length = 500)
+    private String url;
+
+    @Column(columnDefinition = "TEXT")
+    private String content;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
     private ExerciseType type;

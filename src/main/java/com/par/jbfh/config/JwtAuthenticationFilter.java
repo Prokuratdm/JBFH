@@ -1,5 +1,7 @@
 package com.par.jbfh.config;
 
+import com.par.jbfh.auth.entity.User;
+import com.par.jbfh.auth.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -22,6 +25,7 @@ import java.util.stream.Collectors;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
+    private final UserRepository userRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -54,6 +58,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(userPrincipal, null, authorities);
         SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        userRepository.findById(userId).ifPresent(user -> {
+            user.setLastSeenAt(LocalDateTime.now());
+            userRepository.save(user);
+        });
 
         filterChain.doFilter(request, response);
     }
