@@ -154,6 +154,7 @@ src/
 | `POST` | `/api/v1/auth/login` | Аутентификация, получение JWT токена |
 | `GET` | `/swagger-ui/index.html` | Swagger UI |
 | `GET` | `/api-docs` | OpenAPI JSON спецификация |
+| `GET` | `/api/v1/auth/me` | Информация о текущем пользователе (требуется токен) |
 
 ### Управление клубами
 

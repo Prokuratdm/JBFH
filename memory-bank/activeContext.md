@@ -5,16 +5,16 @@
 
 ## Недавние изменения (последние 10)
 
-1. **2026-06-03** — Memory bank обновлён после завершения всех блоков реализации
-2. **2026-06-03** — Добавлены модули: `child/` (Children, ChildPhysicalStats, ChildStandards), `standard/` (Standards CRUD), `training/` (Trainings, TrainingExercises, TemplateTrainings, TrainingPrograms) — 41 новый эндпоинт
-3. **2026-06-03** — Доработаны существующие сущности: Exercise (url, content), User (lastSeenAt), JwtAuthenticationFilter (обновление lastSeenAt + userRepository)
-4. **2026-06-03** — `application.properties`: multipart лимит увеличен до 500KB
-5. **2026-06-03** — `JwtAuthenticationFilterTest` исправлен — добавлен мок `userRepository`
-6. **2026-06-03** — `implementation-plan.md` создан и обновлён — все пункты Блоков 1-10 отмечены выполненными
-7. **2026-06-03** — `README.md` обновлён: добавлены модули `child/`, `standard/`, `training/` в структуру проекта
-8. **2026-06-03** — `er-diagram.puml` доработана до полноценной модели (8 новых сущностей, 6 новых enum'ов, комментарии)
-9. **2026-06-03** — Исправлен `getTypes()` — переписан на `Arrays.stream(ExerciseType.values()).map(ExerciseType::name).toList()`
-10. **2026-06-03** — Добавлен enum `ExerciseType` (ICE, LAND), поле `type` в Exercise, фильтрация по типу
+1. **2026-06-06** — Добавлен эндпоинт `GET /api/v1/auth/me` для получения информации о текущем пользователе из JWT токена
+2. **2026-06-03** — Memory bank обновлён после завершения всех блоков реализации
+3. **2026-06-03** — Добавлены модули: `child/`, `standard/`, `training/` — 41 новый эндпоинт
+4. **2026-06-03** — Доработаны Exercise (url, content), User (lastSeenAt), JwtAuthenticationFilter
+5. **2026-06-03** — многопart лимит увеличен до 500KB
+6. **2026-06-03** — `JwtAuthenticationFilterTest` исправлен
+7. **2026-06-03** — `implementation-plan.md` — все блоки 1-10 выполнены
+8. **2026-06-03** — README обновлён, добавлены child/standard/training
+9. **2026-06-03** — er-diagram.puml доработана (8 новых сущностей, 6 enum'ов)
+10. **2026-06-03** — Исправлен `getTypes()`, добавлен `ExerciseType`
 
 ## Следующие шаги
 - Написать тесты для новых модулей (ChildServiceTest, StandardServiceTest, TrainingServiceTest и др.)

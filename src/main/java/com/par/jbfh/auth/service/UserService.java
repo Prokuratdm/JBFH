@@ -108,6 +108,16 @@ public class UserService {
         userRepository.save(user);
     }
 
+    @Transactional(readOnly = true)
+    public UserResponse getCurrentUser(UserPrincipal principal) {
+        if (principal == null) {
+            throw new IllegalArgumentException("User not authenticated");
+        }
+        User user = userRepository.findById(principal.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + principal.getUserId()));
+        return toUserResponse(user);
+    }
+
     /**
      * Административная смена пароля любому пользователю. Старый пароль не требуется.
      */

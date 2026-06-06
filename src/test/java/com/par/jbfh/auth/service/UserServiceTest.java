@@ -305,4 +305,48 @@ class UserServiceTest {
     }
 
     // endregion
+
+    // region getCurrentUser
+
+    @Test
+    void getCurrentUserShouldReturnUserResponse() {
+        UUID userId = UUID.randomUUID();
+        UserPrincipal principal = new UserPrincipal("testuser", userId, List.of());
+
+        User user = new User();
+        user.setId(userId);
+        user.setUsername("testuser");
+        user.setEmail("test@test.com");
+        user.setEnabled(true);
+        user.setRoles(Set.of(new Role("ROLE_ADMIN")));
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+
+        UserResponse response = userService.getCurrentUser(principal);
+
+        assertThat(response.getUsername()).isEqualTo("testuser");
+        assertThat(response.getEmail()).isEqualTo("test@test.com");
+        assertThat(response.getRoles()).containsExactly("ROLE_ADMIN");
+    }
+
+    @Test
+    void getCurrentUserShouldThrowWhenPrincipalIsNull() {
+        assertThatThrownBy(() -> userService.getCurrentUser(null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("User not authenticated");
+    }
+
+    @Test
+    void getCurrentUserShouldThrowWhenUserNotFound() {
+        UUID userId = UUID.randomUUID();
+        UserPrincipal principal = new UserPrincipal("testuser", userId, List.of());
+
+        when(userRepository.findById(userId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userService.getCurrentUser(principal))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("User not found: " + userId);
+    }
+
+    // endregion
 }

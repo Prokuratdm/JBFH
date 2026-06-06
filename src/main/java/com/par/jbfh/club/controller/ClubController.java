@@ -67,8 +67,7 @@ public class ClubController {
     }
 
     @GetMapping("/{id}/logo")
-    @Secured({"ROLE_ADMIN", "ROLE_METHODIST"})
-    @Operation(summary = "Get club logo", description = "Returns the club logo image file.")
+    @Operation(summary = "Get club logo", description = "Returns the club logo image file. Public endpoint.")
     public ResponseEntity<Resource> getLogo(@PathVariable UUID id) {
         Resource resource = clubService.getLogo(id);
         String contentType = "image/jpeg";
