@@ -10,7 +10,14 @@ import com.par.jbfh.auth.repository.ClubRepository;
 import com.par.jbfh.auth.repository.RoleRepository;
 import com.par.jbfh.auth.repository.UserRepository;
 import com.par.jbfh.config.UserPrincipal;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -128,6 +135,66 @@ public class UserService {
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
+    }
+
+    /**
+     * Получение списка пользователей с фильтрацией и пагинацией.
+     * <p>
+     * ADMIN/METHODIST видят всех пользователей, могут фильтровать по clubId и role.
+     * Клубные роли (CLUB, CLUB_METHODIST, COACH, MAIN_COACH) видят только пользователей своего клуба.
+     * Фильтр username работает для всех ролей (поиск по подстрокам).
+     */
+    @Transactional(readOnly = true)
+    public Page<UserResponse> getAllUsers(UUID clubId, String role, String username,
+                                          UserPrincipal principal, Pageable pageable) {
+        User currentUser = getCurrentUserByPrincipal(principal);
+        boolean isAdminOrMethodist = hasRole(currentUser, "ROLE_ADMIN") || hasRole(currentUser, "ROLE_METHODIST");
+
+        Specification<User> spec = (root, query, cb) -> cb.conjunction();
+
+        // Фильтр по username (LIKE %value%)
+        if (username != null && !username.isBlank()) {
+            spec = spec.and((root, query, cb) ->
+                    cb.like(cb.lower(root.get("username")), "%" + username.toLowerCase() + "%"));
+        }
+
+        // Видимость: не-admins видят только пользователей своего клуба
+        if (!isAdminOrMethodist) {
+            UUID userClubId = currentUser.getClub() != null ? currentUser.getClub().getId() : null;
+            if (userClubId == null) {
+                return Page.empty(pageable);
+            }
+            spec = spec.and((root, query, cb) ->
+                    cb.equal(root.get("club").get("id"), userClubId));
+        } else {
+            // Админ/методист: опциональный фильтр по клубу
+            if (clubId != null) {
+                spec = spec.and((root, query, cb) ->
+                        cb.equal(root.get("club").get("id"), clubId));
+            }
+        }
+
+        // Фильтр по роли (только для ADMIN/METHODIST)
+        if (isAdminOrMethodist && role != null && !role.isBlank()) {
+            spec = spec.and((root, query, cb) -> {
+                Join<User, Role> rolesJoin = root.join("roles", JoinType.INNER);
+                return cb.equal(rolesJoin.get("name"), role);
+            });
+        }
+
+        return userRepository.findAll(spec, pageable).map(this::toUserResponse);
+    }
+
+    private User getCurrentUserByPrincipal(UserPrincipal principal) {
+        if (principal == null) {
+            throw new IllegalArgumentException("User not authenticated");
+        }
+        return userRepository.findById(principal.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + principal.getUserId()));
+    }
+
+    private boolean hasRole(User user, String roleName) {
+        return user.getRoles().stream().anyMatch(r -> r.getName().equals(roleName));
     }
 
     private UserResponse toUserResponse(User user) {

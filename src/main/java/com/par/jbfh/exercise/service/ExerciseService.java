@@ -150,7 +150,7 @@ public class ExerciseService {
         }
         if (request.getInventoryIds() != null) {
             exerciseInventoryRepository.deleteByExerciseId(id);
-            for (UUID inventoryId : request.getInventoryIds()) {
+            for (UUID inventoryId : request.getInventoryIds().stream().distinct().toList()) {
                 Inventory inventory = inventoryRepository.findById(inventoryId)
                         .orElseThrow(() -> new IllegalArgumentException("Inventory not found: " + inventoryId));
                 exerciseInventoryRepository.save(new ExerciseInventory(exercise, inventory));
@@ -158,6 +158,7 @@ public class ExerciseService {
         }
 
         exercise = exerciseRepository.save(exercise);
+
         log.info("Updated exercise '{}'", exercise.getName());
         return toExerciseResponse(exercise);
     }

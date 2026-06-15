@@ -16,6 +16,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.List;
@@ -346,6 +350,146 @@ class UserServiceTest {
         assertThatThrownBy(() -> userService.getCurrentUser(principal))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("User not found: " + userId);
+    }
+
+    // endregion
+
+    // region getAllUsers
+
+    @Test
+    void getAllUsersShouldReturnAllForAdmin() {
+        UUID adminId = UUID.randomUUID();
+        UserPrincipal adminPrincipal = new UserPrincipal("admin", adminId, List.of());
+
+        User admin = new User();
+        admin.setId(adminId);
+        admin.setUsername("admin");
+        admin.setRoles(Set.of(new Role("ROLE_ADMIN")));
+
+        User user1 = new User();
+        user1.setId(UUID.randomUUID());
+        user1.setUsername("coach1");
+        user1.setEmail("coach1@test.com");
+        user1.setRoles(Set.of(new Role("ROLE_COACH")));
+
+        Page<User> page = new PageImpl<>(List.of(user1));
+
+        when(userRepository.findById(adminId)).thenReturn(Optional.of(admin));
+        when(userRepository.findAll(any(Specification.class), any(PageRequest.class))).thenReturn(page);
+
+        Page<UserResponse> result = userService.getAllUsers(null, null, null, adminPrincipal, PageRequest.of(0, 10));
+
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).getUsername()).isEqualTo("coach1");
+    }
+
+    @Test
+    void getAllUsersShouldReturnOnlyClubUsersForClubRole() {
+        UUID clubId = UUID.randomUUID();
+        UUID clubUserId = UUID.randomUUID();
+
+        Club club = new Club("Test Club");
+        club.setId(clubId);
+
+        User clubUser = new User();
+        clubUser.setId(clubUserId);
+        clubUser.setUsername("club_manager");
+        clubUser.setRoles(Set.of(new Role("ROLE_CLUB")));
+        clubUser.setClub(club);
+
+        UserPrincipal clubPrincipal = new UserPrincipal("club_manager", clubUserId, List.of());
+
+        User sameClubUser = new User();
+        sameClubUser.setId(UUID.randomUUID());
+        sameClubUser.setUsername("coach_in_club");
+        sameClubUser.setEmail("coach@club.com");
+        sameClubUser.setRoles(Set.of(new Role("ROLE_COACH")));
+        sameClubUser.setClub(club);
+
+        Page<User> page = new PageImpl<>(List.of(sameClubUser));
+
+        when(userRepository.findById(clubUserId)).thenReturn(Optional.of(clubUser));
+        when(userRepository.findAll(any(Specification.class), any(PageRequest.class))).thenReturn(page);
+
+        Page<UserResponse> result = userService.getAllUsers(null, null, null, clubPrincipal, PageRequest.of(0, 10));
+
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).getUsername()).isEqualTo("coach_in_club");
+    }
+
+    @Test
+    void getAllUsersShouldFilterByUsername() {
+        UUID adminId = UUID.randomUUID();
+        UserPrincipal adminPrincipal = new UserPrincipal("admin", adminId, List.of());
+
+        User admin = new User();
+        admin.setId(adminId);
+        admin.setUsername("admin");
+        admin.setRoles(Set.of(new Role("ROLE_ADMIN")));
+
+        User matched = new User();
+        matched.setId(UUID.randomUUID());
+        matched.setUsername("john_doe");
+        matched.setRoles(Set.of(new Role("ROLE_COACH")));
+
+        Page<User> page = new PageImpl<>(List.of(matched));
+
+        when(userRepository.findById(adminId)).thenReturn(Optional.of(admin));
+        when(userRepository.findAll(any(Specification.class), any(PageRequest.class))).thenReturn(page);
+
+        Page<UserResponse> result = userService.getAllUsers(null, null, "john", adminPrincipal, PageRequest.of(0, 10));
+
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).getUsername()).isEqualTo("john_doe");
+    }
+
+    @Test
+    void getAllUsersShouldFilterByRoleForAdmin() {
+        UUID adminId = UUID.randomUUID();
+        UserPrincipal adminPrincipal = new UserPrincipal("admin", adminId, List.of());
+
+        User admin = new User();
+        admin.setId(adminId);
+        admin.setUsername("admin");
+        admin.setRoles(Set.of(new Role("ROLE_ADMIN")));
+
+        User coach = new User();
+        coach.setId(UUID.randomUUID());
+        coach.setUsername("coach_user");
+        coach.setRoles(Set.of(new Role("ROLE_COACH")));
+
+        Page<User> page = new PageImpl<>(List.of(coach));
+
+        when(userRepository.findById(adminId)).thenReturn(Optional.of(admin));
+        when(userRepository.findAll(any(Specification.class), any(PageRequest.class))).thenReturn(page);
+
+        Page<UserResponse> result = userService.getAllUsers(null, "ROLE_COACH", null, adminPrincipal, PageRequest.of(0, 10));
+
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).getRoles()).contains("ROLE_COACH");
+    }
+
+    @Test
+    void getAllUsersShouldReturnEmptyPageForClubRoleWithoutClub() {
+        UUID userId = UUID.randomUUID();
+        UserPrincipal principal = new UserPrincipal("coach_noclub", userId, List.of());
+
+        User user = new User();
+        user.setId(userId);
+        user.setUsername("coach_noclub");
+        user.setRoles(Set.of(new Role("ROLE_COACH")));
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+
+        Page<UserResponse> result = userService.getAllUsers(null, null, null, principal, PageRequest.of(0, 10));
+        assertThat(result.getContent()).isEmpty();
+    }
+
+    @Test
+    void getAllUsersShouldThrowWhenPrincipalIsNull() {
+        assertThatThrownBy(() -> userService.getAllUsers(null, null, null, null, PageRequest.of(0, 10)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("User not authenticated");
     }
 
     // endregion

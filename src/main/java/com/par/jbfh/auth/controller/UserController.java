@@ -9,6 +9,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.annotation.Secured;
@@ -33,6 +36,22 @@ public class UserController {
     public UserResponse createUser(@Valid @RequestBody CreateUserRequest request,
                                    @AuthenticationPrincipal UserPrincipal principal) {
         return userService.createUser(request, principal);
+    }
+
+    @GetMapping
+    @Secured({"ROLE_ADMIN", "ROLE_METHODIST", "ROLE_CLUB", "ROLE_CLUB_METHODIST", "ROLE_COACH", "ROLE_MAIN_COACH"})
+    @Operation(summary = "Get all users", description = """
+            Returns a paginated list of users.
+            Admin/Methodist see all users, can filter by clubId and role.
+            Club roles see only users of their club.
+            All roles can filter by username (substring search).""")
+    public Page<UserResponse> getAllUsers(
+            @RequestParam(required = false) UUID clubId,
+            @RequestParam(required = false) String role,
+            @RequestParam(required = false) String username,
+            @PageableDefault(size = 10) Pageable pageable,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return userService.getAllUsers(clubId, role, username, principal, pageable);
     }
 
     @GetMapping("/{id}")

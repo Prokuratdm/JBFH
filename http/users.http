@@ -25,6 +25,26 @@ Content-Type: application/json
   "newPassword": "newPassword123"
 }
 
+### Список всех пользователей (админ)
+GET {{baseUrl}}/api/v1/users?page=0&size=10
+Authorization: Bearer {{token}}
+
+### Список пользователей с фильтром по клубу (админ)
+GET {{baseUrl}}/api/v1/users?clubId={{clubId}}&page=0&size=10
+Authorization: Bearer {{token}}
+
+### Список пользователей с фильтром по роли (админ)
+GET {{baseUrl}}/api/v1/users?role=ROLE_COACH&page=0&size=10
+Authorization: Bearer {{token}}
+
+### Список пользователей с фильтром по логину (админ)
+GET {{baseUrl}}/api/v1/users?username=coach&page=0&size=10
+Authorization: Bearer {{token}}
+
+### Список пользователей своего клуба (CLUB/тренер)
+GET {{baseUrl}}/api/v1/users?page=0&size=10
+Authorization: Bearer {{token}}
+
 ### Админская смена пароля (ROLE_ADMIN)
 PUT {{baseUrl}}/api/v1/users/{{userId}}/password
 Authorization: Bearer {{token}}
