@@ -3,6 +3,10 @@ package com.par.jbfh.exercise.controller;
 import com.par.jbfh.exercise.dto.CreateExerciseRequest;
 import com.par.jbfh.exercise.dto.ExerciseResponse;
 import com.par.jbfh.exercise.dto.UpdateExerciseRequest;
+import com.par.jbfh.exercise.enums.ExerciseType;
+import com.par.jbfh.exercise.enums.Focus;
+import com.par.jbfh.exercise.enums.PreparationType;
+import com.par.jbfh.exercise.enums.TrainingPart;
 import com.par.jbfh.exercise.service.ExerciseService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -19,8 +23,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
-import com.par.jbfh.exercise.enums.ExerciseType;
 
 import java.util.List;
 import java.util.UUID;
@@ -47,14 +49,35 @@ public class ExerciseController {
         return exerciseService.getTypes();
     }
 
+    @GetMapping("/training-parts")
+    @Operation(summary = "Get training parts", description = "Returns list of training parts (BEGINNING, MIDDLE, END).")
+    public List<String> getTrainingParts() {
+        return exerciseService.getTrainingParts();
+    }
+
+    @GetMapping("/focuses")
+    @Operation(summary = "Get focus types", description = "Returns list of focus types (STRENGTH, ENDURANCE, COORDINATION, SPEED, FLEXIBILITY, TECHNICAL).")
+    public List<String> getFocuses() {
+        return exerciseService.getFocuses();
+    }
+
+    @GetMapping("/preparation-types")
+    @Operation(summary = "Get preparation types", description = "Returns list of preparation types (TECHNICAL, PHYSICAL, PSYCHOLOGICAL, TACTICAL).")
+    public List<String> getPreparationTypes() {
+        return exerciseService.getPreparationTypes();
+    }
+
     @GetMapping
     @Secured({"ROLE_ADMIN", "ROLE_METHODIST", "ROLE_CLUB", "ROLE_CLUB_METHODIST", "ROLE_COACH", "ROLE_MAIN_COACH"})
-    @Operation(summary = "Get all exercises", description = "Returns paginated list. Admins/methodists see all; others see global + their club's. Optional type filter.")
+    @Operation(summary = "Get all exercises", description = "Returns paginated list. Admins/methodists see all; others see global + their club's. Optional filters: type, trainingPart, focus, preparationType.")
     public Page<ExerciseResponse> getAll(
             @RequestParam(defaultValue = "true") boolean active,
             @RequestParam(required = false) ExerciseType type,
+            @RequestParam(required = false) TrainingPart trainingPart,
+            @RequestParam(required = false) Focus focus,
+            @RequestParam(required = false) PreparationType preparationType,
             @PageableDefault(size = 20) Pageable pageable) {
-        return exerciseService.getAll(active, type, pageable);
+        return exerciseService.getAll(active, type, trainingPart, focus, preparationType, pageable);
     }
 
     @GetMapping("/{id}")

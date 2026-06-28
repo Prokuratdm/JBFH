@@ -11,6 +11,9 @@ import com.par.jbfh.exercise.dto.UpdateExerciseRequest;
 import com.par.jbfh.exercise.entity.Exercise;
 import com.par.jbfh.exercise.entity.ExerciseInventory;
 import com.par.jbfh.exercise.enums.ExerciseType;
+import com.par.jbfh.exercise.enums.Focus;
+import com.par.jbfh.exercise.enums.PreparationType;
+import com.par.jbfh.exercise.enums.TrainingPart;
 import com.par.jbfh.exercise.repository.ExerciseInventoryRepository;
 import com.par.jbfh.exercise.repository.ExerciseRepository;
 import com.par.jbfh.inventory.entity.Inventory;
@@ -61,6 +64,9 @@ public class ExerciseService {
         exercise.setUrl(request.getUrl());
         exercise.setContent(request.getContent());
         exercise.setActive(true);
+        exercise.setTrainingPart(request.getTrainingPart());
+        exercise.setFocuses(request.getFocuses());
+        exercise.setPreparationType(request.getPreparationType());
 
         if (isAdminOrMethodist) {
             if (request.getClubId() != null) {
@@ -90,7 +96,9 @@ public class ExerciseService {
     }
 
     @Transactional(readOnly = true)
-    public Page<ExerciseResponse> getAll(boolean activeOnly, ExerciseType type, Pageable pageable) {
+    public Page<ExerciseResponse> getAll(boolean activeOnly, ExerciseType type,
+                                         TrainingPart trainingPart, Focus focus,
+                                         PreparationType preparationType, Pageable pageable) {
         User currentUser = getCurrentUser();
         boolean isAdminOrMethodist = hasRole(currentUser, "ROLE_ADMIN") || hasRole(currentUser, "ROLE_METHODIST");
 
@@ -101,6 +109,15 @@ public class ExerciseService {
         }
         if (type != null) {
             spec = spec.and((root, query, cb) -> cb.equal(root.get("type"), type));
+        }
+        if (trainingPart != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("trainingPart"), trainingPart));
+        }
+        if (focus != null) {
+            spec = spec.and((root, query, cb) -> cb.isMember(focus, root.get("focuses")));
+        }
+        if (preparationType != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("preparationType"), preparationType));
         }
 
         if (!isAdminOrMethodist) {
@@ -147,6 +164,15 @@ public class ExerciseService {
         }
         if (request.getContent() != null) {
             exercise.setContent(request.getContent());
+        }
+        if (request.getTrainingPart() != null) {
+            exercise.setTrainingPart(request.getTrainingPart());
+        }
+        if (request.getFocuses() != null) {
+            exercise.setFocuses(request.getFocuses());
+        }
+        if (request.getPreparationType() != null) {
+            exercise.setPreparationType(request.getPreparationType());
         }
         if (request.getInventoryIds() != null) {
             exerciseInventoryRepository.deleteByExerciseId(id);
@@ -208,6 +234,24 @@ public class ExerciseService {
                 .toList();
     }
 
+    public List<String> getTrainingParts() {
+        return Arrays.stream(TrainingPart.values())
+                .map(TrainingPart::name)
+                .toList();
+    }
+
+    public List<String> getFocuses() {
+        return Arrays.stream(Focus.values())
+                .map(Focus::name)
+                .toList();
+    }
+
+    public List<String> getPreparationTypes() {
+        return Arrays.stream(PreparationType.values())
+                .map(PreparationType::name)
+                .toList();
+    }
+
     private ExerciseResponse toExerciseResponse(Exercise exercise) {
         List<UUID> inventoryIds = exerciseInventoryRepository.findByExerciseId(exercise.getId()).stream()
                 .map(ei -> ei.getInventory().getId())
@@ -229,6 +273,9 @@ public class ExerciseService {
                 exercise.getClub() != null ? exercise.getClub().getId() : null,
                 exercise.getClub() != null ? exercise.getClub().getName() : null,
                 inventoryIds,
+                exercise.getTrainingPart(),
+                exercise.getFocuses(),
+                exercise.getPreparationType(),
                 exercise.getCreatedAt(),
                 exercise.getUpdatedAt()
         );

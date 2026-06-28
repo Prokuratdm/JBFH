@@ -11,6 +11,9 @@ import com.par.jbfh.exercise.dto.ExerciseResponse;
 import com.par.jbfh.exercise.dto.UpdateExerciseRequest;
 import com.par.jbfh.exercise.entity.Exercise;
 import com.par.jbfh.exercise.enums.ExerciseType;
+import com.par.jbfh.exercise.enums.Focus;
+import com.par.jbfh.exercise.enums.PreparationType;
+import com.par.jbfh.exercise.enums.TrainingPart;
 import com.par.jbfh.exercise.repository.ExerciseInventoryRepository;
 import com.par.jbfh.exercise.repository.ExerciseRepository;
 import com.par.jbfh.inventory.repository.InventoryRepository;
@@ -98,6 +101,9 @@ class ExerciseServiceTest {
         request.setType(ExerciseType.ICE);
         request.setUrl("https://example.com/video");
         request.setContent("Методика выполнения упражнения");
+        request.setTrainingPart(TrainingPart.BEGINNING);
+        request.setFocuses(Set.of(Focus.STRENGTH, Focus.SPEED));
+        request.setPreparationType(PreparationType.PHYSICAL);
 
         when(exerciseRepository.existsByName("Упражнение 1")).thenReturn(false);
         when(exerciseRepository.save(any(Exercise.class))).thenAnswer(inv -> {
@@ -115,6 +121,9 @@ class ExerciseServiceTest {
         assertThat(response.clubId()).isEqualTo(clubId);
         assertThat(response.url()).isEqualTo("https://example.com/video");
         assertThat(response.content()).isEqualTo("Методика выполнения упражнения");
+        assertThat(response.trainingPart()).isEqualTo(TrainingPart.BEGINNING);
+        assertThat(response.focuses()).containsExactlyInAnyOrder(Focus.STRENGTH, Focus.SPEED);
+        assertThat(response.preparationType()).isEqualTo(PreparationType.PHYSICAL);
     }
 
     @Test
@@ -149,7 +158,7 @@ class ExerciseServiceTest {
                 .thenReturn(page);
         when(exerciseInventoryRepository.findByExerciseId(any())).thenReturn(List.of());
 
-        Page<ExerciseResponse> result = exerciseService.getAll(true, null, PageRequest.of(0, 20));
+        Page<ExerciseResponse> result = exerciseService.getAll(true, null, null, null, null, PageRequest.of(0, 20));
 
         assertThat(result.getContent()).hasSize(1);
     }
@@ -190,6 +199,30 @@ class ExerciseServiceTest {
         ExerciseResponse response = exerciseService.update(id, request);
 
         assertThat(response.type()).isEqualTo(ExerciseType.LAND);
+    }
+
+    @Test
+    void updateShouldUpdateNewFields() {
+        UUID id = UUID.randomUUID();
+        Exercise ex = new Exercise();
+        ex.setId(id);
+        ex.setName("Old");
+        ex.setType(ExerciseType.ICE);
+
+        when(exerciseRepository.findById(id)).thenReturn(Optional.of(ex));
+        when(exerciseRepository.save(any())).thenReturn(ex);
+        when(exerciseInventoryRepository.findByExerciseId(id)).thenReturn(List.of());
+
+        UpdateExerciseRequest request = new UpdateExerciseRequest();
+        request.setTrainingPart(TrainingPart.END);
+        request.setFocuses(Set.of(Focus.TECHNICAL));
+        request.setPreparationType(PreparationType.TACTICAL);
+
+        ExerciseResponse response = exerciseService.update(id, request);
+
+        assertThat(response.trainingPart()).isEqualTo(TrainingPart.END);
+        assertThat(response.focuses()).containsExactly(Focus.TECHNICAL);
+        assertThat(response.preparationType()).isEqualTo(PreparationType.TACTICAL);
     }
 
     @Test
@@ -237,5 +270,26 @@ class ExerciseServiceTest {
         List<String> types = exerciseService.getTypes();
 
         assertThat(types).containsExactly("ICE", "LAND");
+    }
+
+    @Test
+    void getTrainingPartsShouldReturnAll() {
+        List<String> parts = exerciseService.getTrainingParts();
+
+        assertThat(parts).containsExactly("BEGINNING", "MIDDLE", "END");
+    }
+
+    @Test
+    void getFocusesShouldReturnAll() {
+        List<String> focuses = exerciseService.getFocuses();
+
+        assertThat(focuses).containsExactly("STRENGTH", "ENDURANCE", "COORDINATION", "SPEED", "FLEXIBILITY", "TECHNICAL");
+    }
+
+    @Test
+    void getPreparationTypesShouldReturnAll() {
+        List<String> types = exerciseService.getPreparationTypes();
+
+        assertThat(types).containsExactly("TECHNICAL", "PHYSICAL", "PSYCHOLOGICAL", "TACTICAL");
     }
 }

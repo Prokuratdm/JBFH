@@ -2,12 +2,17 @@ package com.par.jbfh.exercise.entity;
 
 import com.par.jbfh.auth.entity.Club;
 import com.par.jbfh.exercise.enums.ExerciseType;
+import com.par.jbfh.exercise.enums.Focus;
+import com.par.jbfh.exercise.enums.PreparationType;
+import com.par.jbfh.exercise.enums.TrainingPart;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 @Entity
@@ -43,6 +48,20 @@ public class Exercise {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "club_id")
     private Club club;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 50)
+    private TrainingPart trainingPart;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "exercise_focuses", joinColumns = @JoinColumn(name = "exercise_id"))
+    @Enumerated(EnumType.STRING)
+    @Column(name = "focus", length = 50)
+    private Set<Focus> focuses = new HashSet<>();
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 50)
+    private PreparationType preparationType;
 
     @Column(nullable = false)
     private boolean active = true;
