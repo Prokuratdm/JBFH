@@ -17,6 +17,7 @@ public record TrainingExerciseResponse(
         Integer explanationDuration,
         WorkMode workMode,
         Integer totalTime,
-        LoadLevel loadLevel
+        LoadLevel loadLevel,
+        int repetitions
 ) {
 }

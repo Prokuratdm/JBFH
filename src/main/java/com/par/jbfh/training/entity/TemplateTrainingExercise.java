@@ -54,16 +54,17 @@ public class TemplateTrainingExercise {
     @Column(name = "load_level", nullable = false, length = 50)
     private LoadLevel loadLevel;
 
+    @Column(nullable = false)
+    private int repetitions = 1;
+
     @PrePersist
     @PreUpdate
     protected void calculate() {
-        this.restDuration = this.workDuration / 2;
-        if (this.workDuration >= 120) this.workMode = WorkMode.UNIFORM;
-        else if (this.workDuration >= 60) this.workMode = WorkMode.ALTERNATING;
-        else if (this.workDuration >= 30) this.workMode = WorkMode.INTERVAL;
-        else this.workMode = WorkMode.REPEATED;
+        var calc = TrainingExercise.CalculationResult.calculate(this.workDuration, this.intensity);
+        this.restDuration = calc.restDuration();
+        this.workMode = calc.workMode();
+
         int expl = this.explanationDuration != null ? this.explanationDuration : 0;
-        int rest = this.restDuration != null ? this.restDuration : 0;
-        this.totalTime = this.workDuration + rest + expl;
+        this.totalTime = this.repetitions * (this.workDuration + this.restDuration) + expl;
     }
 }

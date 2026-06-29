@@ -23,4 +23,6 @@ public class AddExerciseToTrainingRequest {
 
     @NotNull
     private LoadLevel loadLevel;
+
+    private int repetitions = 1;
 }

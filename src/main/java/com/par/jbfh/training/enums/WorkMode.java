@@ -1,8 +1,9 @@
 package com.par.jbfh.training.enums;
 
 public enum WorkMode {
-    INTERVAL,
-    REPEATED,
-    UNIFORM,
-    ALTERNATING
+    ANAEROBIC_ALACTIC,
+    ANAEROBIC_MIXED,
+    ANAEROBIC_LACTIC,
+    AEROBIC,
+    AEROBIC_RECOVERY
 }

@@ -137,6 +137,7 @@ public class TemplateTrainingService {
         te.setIntensity(request.getIntensity());
         te.setExplanationDuration(request.getExplanationDuration());
         te.setLoadLevel(request.getLoadLevel());
+        te.setRepetitions(request.getRepetitions());
         // calculate() вызывается автоматически через @PrePersist
     }
 
