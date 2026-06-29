@@ -76,10 +76,17 @@ entity "exercises" as exercise {
   picture_path : VARCHAR(500)
   url : VARCHAR(500)
   content : TEXT
+  training_part : VARCHAR(50)  { BEGINNING | MIDDLE | END }
+  preparation_type : VARCHAR(50)  { TECHNICAL | PHYSICAL | PSYCHOLOGICAL | TACTICAL }
   club_id : UUID <<FK nullable>>
   * active : BOOLEAN
   * created_at : TIMESTAMP
   updated_at : TIMESTAMP
+}
+
+entity "exercise_focuses" as ex_focus {
+  * exercise_id : UUID <<FK>>
+  * focus : VARCHAR(50)  { STRENGTH | ENDURANCE | COORDINATION | SPEED | FLEXIBILITY | TECHNICAL }
 }
 
 entity "exercise_inventory" as ex_inv {
@@ -113,7 +120,6 @@ entity "trainings" as training {
   task_1 : VARCHAR(1000)
   task_2 : VARCHAR(1000)
   task_3 : VARCHAR(1000)
-  source_template_id : UUID <<FK nullable>>
   * created_by : UUID <<FK>>
   * created_at : TIMESTAMP
   updated_at : TIMESTAMP
@@ -131,6 +137,7 @@ entity "training_exercises" as training_ex {
   work_mode : VARCHAR(50)
   total_time : INTEGER
   * load_level : VARCHAR(50)
+  * repetitions : INTEGER  (default 1)
 }
 
 entity "template_trainings" as template_training {
@@ -159,6 +166,32 @@ entity "template_training_exercises" as template_training_ex {
   work_mode : VARCHAR(50)
   total_time : INTEGER
   * load_level : VARCHAR(50)
+  * repetitions : INTEGER  (default 1)
+}
+
+entity "sets" as set {
+  * id : UUID <<PK>>
+  --
+  * name : VARCHAR(255)
+  training_part : VARCHAR(50)  { BEGINNING | MIDDLE | END }
+  club_id : UUID <<FK nullable>>
+  * created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+}
+
+entity "set_exercises" as set_ex {
+  * id : UUID <<PK>>
+  --
+  * set_id : UUID <<FK>>
+  * exercise_id : UUID <<FK>>
+  * work_duration : INTEGER
+  * intensity : VARCHAR(50)
+  rest_duration : INTEGER
+  explanation_duration : INTEGER
+  work_mode : VARCHAR(50)
+  total_time : INTEGER
+  * load_level : VARCHAR(50)
+  * repetitions : INTEGER  (default 1)
 }
 
 entity "children" as child {
@@ -226,6 +259,7 @@ club ||--o{ location : "has"
 club ||--o{ template_training : "has (nullable)"
 club ||--o{ training_program : "has (nullable)"
 club ||--o{ standard : "has (nullable)"
+club ||--o{ set : "has (nullable)"
 
 user ||--o{ user_roles : "has"
 role ||--o{ user_roles : "assigned"
@@ -238,15 +272,17 @@ team ||--o{ child : "has"
 location ||--o{ training : "hosts"
 
 training ||--o{ training_ex : "contains"
-training }o--o| template_training : "created from"
-
 exercise ||--o{ ex_inv : "requires"
 exercise ||--o{ training_ex : "used in"
 exercise ||--o{ template_training_ex : "used in"
+exercise ||--o{ set_ex : "used in"
+exercise ||--o{ ex_focus : "classified by"
 
 inventory ||--o{ ex_inv : "used in"
 
 template_training ||--o{ template_training_ex : "contains"
+
+set ||--o{ set_ex : "contains"
 
 child ||--o{ child_standard : "results"
 child ||--o{ child_stats : "measurements"
@@ -260,6 +296,28 @@ user ||--o{ training : "created"
 enum "ExerciseType" as ex_type {
   ICE
   LAND
+}
+
+enum "TrainingPart" as training_part {
+  BEGINNING
+  MIDDLE
+  END
+}
+
+enum "Focus" as focus_enum {
+  STRENGTH
+  ENDURANCE
+  COORDINATION
+  SPEED
+  FLEXIBILITY
+  TECHNICAL
+}
+
+enum "PreparationType" as prep_type {
+  TECHNICAL
+  PHYSICAL
+  PSYCHOLOGICAL
+  TACTICAL
 }
 
 enum "FileType" as file_type {
@@ -279,6 +337,8 @@ enum "Roles" as roles_enum {
 }
 
 enum "Intensity" as intensity {
+  MAXIMUM
+  SUBMAXIMUM
   HIGH
   MEDIUM
   LOW
@@ -300,10 +360,11 @@ enum "TrainingCycle" as training_cycle {
 }
 
 enum "WorkMode" as work_mode {
-  INTERVAL
-  REPEATED
-  UNIFORM
-  ALTERNATING
+  ANAEROBIC_ALACTIC
+  ANAEROBIC_MIXED
+  ANAEROBIC_LACTIC
+  AEROBIC
+  AEROBIC_RECOVERY
 }
 
 enum "Gender" as gender {
@@ -318,35 +379,27 @@ enum "StandardUnit" as standard_unit {
   METERS
 }
 
-note bottom of exercise : uses ExerciseType enum
+note bottom of exercise : uses ExerciseType, TrainingPart,\nPreparationType; Focus хранится\nв exercise_focuses
 note bottom of file_type : defines subdirectory,\nmax size, allowed MIME types
 note bottom of roles_enum : stored in "roles" table
-note bottom of intensity : интенсивность упражнения:\nВысокая, Средняя, Низкая
+note bottom of intensity : интенсивность:\nМаксимальная, Субмаксимальная,\nВысокая, Средняя, Низкая
 note bottom of load_level : уровень нагрузки:\nМаксимальная, Субмаксимальная,\nВысокая, Средняя, Низкая
 note bottom of training_cycle : цикл программы обучения:\nНеделя, Месяц, 3 месяца, Год
-note bottom of work_mode : режим работы:\nопределяется автоматически
+note bottom of work_mode : режим работы:\nопределяется ExerciseCalculator
 note bottom of gender : пол: Мужской, Женский
-note bottom of standard_unit : единицы измерения норматива:\nСекунды, Минуты, Сантиметры, Метры
+note bottom of standard_unit : единицы измерения норматива
 
 note top of training_ex
-  rest_duration — рассчитывается автоматически\n
-  work_mode — определяется автоматически\n
-  total_time — рассчитывается автоматически\n
-  explanation_duration — хранится в секундах,\n
-  отображается в минутах
+  all *_exercises tables:\n
+  rest_duration — рассчитывается\n
+  work_mode — рассчитывается\n
+  total_time — рассчитывается\n
+  через ExerciseCalculator
 end note
 
-note top of template_training_ex
-  поля как в training_exercises:\n
-  rest_duration, work_mode, total_time — авто\n
-  explanation_duration — сек → мин
-end note
-
-note top of training
-  source_template_id — ссылка на эталонную\n
-  тренировку, если создана из шаблона.\n
-  При копировании упражнения и задачи\n
-  копируются в training_exercises и tasks
+note top of set
+  Сет — набор стандартных упражнений\n
+  для фазы тренировки (разминка, заминка).
 end note
 
 note top of training_program

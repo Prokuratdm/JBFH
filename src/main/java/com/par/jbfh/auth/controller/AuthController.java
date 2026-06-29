@@ -11,12 +11,14 @@ import com.par.jbfh.config.UserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -29,6 +31,40 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final UserService userService;
+
+    @PostMapping(value = "/oauth2/token", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    @Operation(summary = "OAuth2 token", description = "OAuth2 password flow token endpoint for Swagger Authorize button")
+    public ResponseEntity<Map<String, Object>> oauth2Token(
+            @RequestParam("grant_type") String grantType,
+            @RequestParam("username") String username,
+            @RequestParam("password") String password) {
+
+        if (!"password".equals(grantType)) {
+            throw new IllegalArgumentException("Unsupported grant_type: " + grantType);
+        }
+
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid username or password"));
+
+        if (!passwordEncoder.matches(password, user.getPassword())) {
+            throw new IllegalArgumentException("Invalid username or password");
+        }
+
+        if (!user.isEnabled()) {
+            throw new IllegalArgumentException("User is disabled");
+        }
+
+        var roles = user.getRoles().stream()
+                .map(role -> role.getName())
+                .collect(Collectors.toList());
+
+        String token = jwtService.generateToken(user.getUsername(), user.getId(), roles);
+
+        return ResponseEntity.ok(Map.of(
+                "access_token", token,
+                "token_type", "bearer"
+        ));
+    }
 
     @PostMapping("/login")
     @Operation(summary = "Login", description = "Authenticate user and return JWT token")

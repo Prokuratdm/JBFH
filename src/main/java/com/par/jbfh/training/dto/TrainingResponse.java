@@ -20,8 +20,6 @@ public record TrainingResponse(
         String task1,
         String task2,
         String task3,
-        UUID sourceTemplateId,
-        String sourceTemplateName,
         UUID createdById,
         String createdByUsername,
         LocalDateTime createdAt,

@@ -1,34 +1,25 @@
 package com.par.jbfh.training.service;
 
 import com.par.jbfh.auth.entity.Club;
-import com.par.jbfh.auth.entity.User;
 import com.par.jbfh.auth.repository.ClubRepository;
-import com.par.jbfh.auth.repository.UserRepository;
-import com.par.jbfh.config.UserPrincipal;
 import com.par.jbfh.exercise.entity.Exercise;
 import com.par.jbfh.exercise.repository.ExerciseRepository;
-import com.par.jbfh.training.service.ExerciseCalculator;
-import com.par.jbfh.team.entity.Team;
-import com.par.jbfh.team.repository.TeamRepository;
 import com.par.jbfh.training.dto.AddExerciseToTrainingRequest;
 import com.par.jbfh.training.dto.CreateTemplateTrainingRequest;
 import com.par.jbfh.training.dto.TemplateTrainingResponse;
-import com.par.jbfh.training.dto.TrainingResponse;
+import com.par.jbfh.training.dto.TrainingExerciseResponse;
 import com.par.jbfh.training.entity.TemplateTraining;
 import com.par.jbfh.training.entity.TemplateTrainingExercise;
-import com.par.jbfh.training.entity.Training;
-import com.par.jbfh.training.entity.TrainingExercise;
+import com.par.jbfh.training.repository.TemplateTrainingExerciseRepository;
 import com.par.jbfh.training.repository.TemplateTrainingRepository;
-import com.par.jbfh.training.repository.TrainingRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -37,10 +28,8 @@ import java.util.UUID;
 public class TemplateTrainingService {
 
     private final TemplateTrainingRepository templateTrainingRepository;
+    private final TemplateTrainingExerciseRepository templateTrainingExerciseRepository;
     private final ClubRepository clubRepository;
-    private final UserRepository userRepository;
-    private final TeamRepository teamRepository;
-    private final TrainingRepository trainingRepository;
     private final ExerciseRepository exerciseRepository;
     private final ExerciseCalculator exerciseCalculator;
 
@@ -96,39 +85,17 @@ public class TemplateTrainingService {
     public void delete(UUID id) {
         TemplateTraining template = templateTrainingRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Template training not found: " + id));
+        templateTrainingExerciseRepository.deleteByTemplateTrainingId(id);
         templateTrainingRepository.delete(template);
         log.info("Deleted template training '{}'", template.getName());
     }
 
-    @Transactional
-    public TrainingResponse apply(UUID templateId, UUID teamId) {
-        User currentUser = getCurrentUser();
-        TemplateTraining template = templateTrainingRepository.findById(templateId)
-                .orElseThrow(() -> new IllegalArgumentException("Template training not found: " + templateId));
-        Team team = teamRepository.findById(teamId)
-                .orElseThrow(() -> new IllegalArgumentException("Team not found: " + teamId));
-
-        Training training = new Training();
-        training.setName(template.getName());
-        training.setDescription(template.getDescription());
-        training.setTask1(template.getTask1());
-        training.setTask2(template.getTask2());
-        training.setTask3(template.getTask3());
-        training.setTeam(team);
-        training.setSourceTemplate(template);
-        training.setCreatedBy(currentUser);
-        training.setDate(java.time.LocalDate.now());
-
-        training = trainingRepository.save(training);
-        log.info("Applied template '{}' to team '{}' — created training '{}'",
-                template.getName(), team.getName(), training.getName());
-        return toTrainingResponse(training);
-    }
+    // region Exercises
 
     @Transactional
-    public void addExercise(UUID templateId, AddExerciseToTrainingRequest request) {
-        TemplateTraining template = templateTrainingRepository.findById(templateId)
-                .orElseThrow(() -> new IllegalArgumentException("Template training not found: " + templateId));
+    public TrainingExerciseResponse addExercise(UUID templateTrainingId, AddExerciseToTrainingRequest request) {
+        TemplateTraining template = templateTrainingRepository.findById(templateTrainingId)
+                .orElseThrow(() -> new IllegalArgumentException("Template training not found: " + templateTrainingId));
         Exercise exercise = exerciseRepository.findById(request.getExerciseId())
                 .orElseThrow(() -> new IllegalArgumentException("Exercise not found: " + request.getExerciseId()));
 
@@ -147,7 +114,55 @@ public class TemplateTrainingService {
         te.setTotalTime(exerciseCalculator.calculateTotalTime(
                 te.getWorkDuration(), te.getRestDuration(),
                 te.getRepetitions(), te.getExplanationDuration()));
+
+        te = templateTrainingExerciseRepository.save(te);
+        return toExerciseResponse(te);
     }
+
+    @Transactional(readOnly = true)
+    public List<TrainingExerciseResponse> getExercises(UUID templateTrainingId) {
+        return templateTrainingExerciseRepository.findByTemplateTrainingId(templateTrainingId).stream()
+                .map(this::toExerciseResponse)
+                .toList();
+    }
+
+    @Transactional
+    public TrainingExerciseResponse updateExercise(UUID templateTrainingId, UUID exerciseId,
+                                                    AddExerciseToTrainingRequest request) {
+        TemplateTrainingExercise te = templateTrainingExerciseRepository.findById(exerciseId)
+                .orElseThrow(() -> new IllegalArgumentException("TemplateTrainingExercise not found: " + exerciseId));
+        if (!te.getTemplateTraining().getId().equals(templateTrainingId)) {
+            throw new IllegalArgumentException("Exercise does not belong to template: " + templateTrainingId);
+        }
+
+        te.setWorkDuration(request.getWorkDuration());
+        te.setIntensity(request.getIntensity());
+        te.setExplanationDuration(request.getExplanationDuration());
+        te.setLoadLevel(request.getLoadLevel());
+        te.setRepetitions(request.getRepetitions());
+
+        var calc = exerciseCalculator.calculateRestAndMode(te.getWorkDuration(), te.getIntensity());
+        te.setRestDuration(calc.restDuration());
+        te.setWorkMode(calc.workMode());
+        te.setTotalTime(exerciseCalculator.calculateTotalTime(
+                te.getWorkDuration(), te.getRestDuration(),
+                te.getRepetitions(), te.getExplanationDuration()));
+
+        te = templateTrainingExerciseRepository.save(te);
+        return toExerciseResponse(te);
+    }
+
+    @Transactional
+    public void deleteExercise(UUID templateTrainingId, UUID exerciseId) {
+        TemplateTrainingExercise te = templateTrainingExerciseRepository.findById(exerciseId)
+                .orElseThrow(() -> new IllegalArgumentException("TemplateTrainingExercise not found: " + exerciseId));
+        if (!te.getTemplateTraining().getId().equals(templateTrainingId)) {
+            throw new IllegalArgumentException("Exercise does not belong to template: " + templateTrainingId);
+        }
+        templateTrainingExerciseRepository.delete(te);
+    }
+
+    // endregion
 
     private TemplateTrainingResponse toResponse(TemplateTraining template) {
         return new TemplateTrainingResponse(
@@ -167,39 +182,20 @@ public class TemplateTrainingService {
         );
     }
 
-    private TrainingResponse toTrainingResponse(Training training) {
-        return new TrainingResponse(
-                training.getId(),
-                training.getName(),
-                training.getDate(),
-                training.getTimeStart(),
-                training.getTimeEnd(),
-                training.getLocation() != null ? training.getLocation().getId() : null,
-                training.getLocation() != null ? training.getLocation().getName() : null,
-                training.getTeam().getId(),
-                training.getTeam().getName(),
-                training.getPicturePath() != null
-                        ? "/api/v1/trainings/" + training.getId() + "/picture"
-                        : null,
-                training.getDescription(),
-                training.getTask1(),
-                training.getTask2(),
-                training.getTask3(),
-                training.getSourceTemplate() != null ? training.getSourceTemplate().getId() : null,
-                training.getSourceTemplate() != null ? training.getSourceTemplate().getName() : null,
-                training.getCreatedBy().getId(),
-                training.getCreatedBy().getUsername(),
-                training.getCreatedAt(),
-                training.getUpdatedAt()
+    private TrainingExerciseResponse toExerciseResponse(TemplateTrainingExercise te) {
+        return new TrainingExerciseResponse(
+                te.getId(),
+                te.getTemplateTraining().getId(),
+                te.getExercise().getId(),
+                te.getExercise().getName(),
+                te.getWorkDuration(),
+                te.getIntensity(),
+                te.getRestDuration(),
+                te.getExplanationDuration(),
+                te.getWorkMode(),
+                te.getTotalTime(),
+                te.getLoadLevel(),
+                te.getRepetitions()
         );
-    }
-
-    private User getCurrentUser() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !(auth.getPrincipal() instanceof UserPrincipal principal)) {
-            throw new IllegalArgumentException("User not authenticated");
-        }
-        return userRepository.findById(principal.getUserId())
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + principal.getUserId()));
     }
 }

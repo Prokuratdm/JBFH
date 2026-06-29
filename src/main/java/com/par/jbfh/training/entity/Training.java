@@ -60,10 +60,6 @@ public class Training {
     private String task3;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "source_template_id")
-    private TemplateTraining sourceTemplate;
-
-    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by", nullable = false)
     private User createdBy;
 

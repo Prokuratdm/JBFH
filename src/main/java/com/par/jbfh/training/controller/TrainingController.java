@@ -1,6 +1,8 @@
 package com.par.jbfh.training.controller;
 
+import com.par.jbfh.training.dto.AddExerciseToTrainingRequest;
 import com.par.jbfh.training.dto.CreateTrainingRequest;
+import com.par.jbfh.training.dto.TrainingExerciseResponse;
 import com.par.jbfh.training.dto.TrainingResponse;
 import com.par.jbfh.training.dto.UpdateTrainingRequest;
 import com.par.jbfh.training.service.TrainingService;
@@ -17,6 +19,7 @@ import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -67,5 +70,43 @@ public class TrainingController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable UUID teamId, @PathVariable UUID id) {
         trainingService.delete(teamId, id);
+    }
+
+    @PostMapping("/{trainingId}/exercises")
+    @Secured({"ROLE_CLUB", "ROLE_COACH", "ROLE_MAIN_COACH"})
+    @Operation(summary = "Add exercise to training")
+    @ResponseStatus(HttpStatus.CREATED)
+    public TrainingExerciseResponse addExercise(@PathVariable UUID teamId,
+                                                 @PathVariable UUID trainingId,
+                                                 @Valid @RequestBody AddExerciseToTrainingRequest request) {
+        return trainingService.addExercise(trainingId, request);
+    }
+
+    @GetMapping("/{trainingId}/exercises")
+    @Secured({"ROLE_CLUB", "ROLE_COACH", "ROLE_MAIN_COACH"})
+    @Operation(summary = "List exercises in training")
+    public List<TrainingExerciseResponse> getExercises(@PathVariable UUID teamId,
+                                                       @PathVariable UUID trainingId) {
+        return trainingService.getExercises(trainingId);
+    }
+
+    @PutMapping("/{trainingId}/exercises/{exerciseId}")
+    @Secured({"ROLE_CLUB", "ROLE_COACH", "ROLE_MAIN_COACH"})
+    @Operation(summary = "Update exercise params in training")
+    public TrainingExerciseResponse updateExercise(@PathVariable UUID teamId,
+                                                    @PathVariable UUID trainingId,
+                                                    @PathVariable UUID exerciseId,
+                                                    @Valid @RequestBody AddExerciseToTrainingRequest request) {
+        return trainingService.updateExercise(trainingId, exerciseId, request);
+    }
+
+    @DeleteMapping("/{trainingId}/exercises/{exerciseId}")
+    @Secured({"ROLE_CLUB", "ROLE_COACH", "ROLE_MAIN_COACH"})
+    @Operation(summary = "Remove exercise from training")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteExercise(@PathVariable UUID teamId,
+                               @PathVariable UUID trainingId,
+                               @PathVariable UUID exerciseId) {
+        trainingService.deleteExercise(trainingId, exerciseId);
     }
 }

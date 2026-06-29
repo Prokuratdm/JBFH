@@ -31,6 +31,4 @@ public class CreateTrainingRequest {
     private String task1;
     private String task2;
     private String task3;
-
-    private UUID sourceTemplateId;
 }
