@@ -7,6 +7,7 @@ import com.par.jbfh.auth.repository.UserRepository;
 import com.par.jbfh.config.UserPrincipal;
 import com.par.jbfh.exercise.entity.Exercise;
 import com.par.jbfh.exercise.repository.ExerciseRepository;
+import com.par.jbfh.training.service.ExerciseCalculator;
 import com.par.jbfh.team.entity.Team;
 import com.par.jbfh.team.repository.TeamRepository;
 import com.par.jbfh.training.dto.AddExerciseToTrainingRequest;
@@ -41,6 +42,7 @@ public class TemplateTrainingService {
     private final TeamRepository teamRepository;
     private final TrainingRepository trainingRepository;
     private final ExerciseRepository exerciseRepository;
+    private final ExerciseCalculator exerciseCalculator;
 
     @Transactional
     public TemplateTrainingResponse create(CreateTemplateTrainingRequest request) {
@@ -138,7 +140,13 @@ public class TemplateTrainingService {
         te.setExplanationDuration(request.getExplanationDuration());
         te.setLoadLevel(request.getLoadLevel());
         te.setRepetitions(request.getRepetitions());
-        // calculate() вызывается автоматически через @PrePersist
+
+        var calc = exerciseCalculator.calculateRestAndMode(te.getWorkDuration(), te.getIntensity());
+        te.setRestDuration(calc.restDuration());
+        te.setWorkMode(calc.workMode());
+        te.setTotalTime(exerciseCalculator.calculateTotalTime(
+                te.getWorkDuration(), te.getRestDuration(),
+                te.getRepetitions(), te.getExplanationDuration()));
     }
 
     private TemplateTrainingResponse toResponse(TemplateTraining template) {

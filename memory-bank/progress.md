@@ -10,10 +10,11 @@
 - [x] Привязка пользователей к клубам (для клубных ролей)
 - [x] Обновление lastSeenAt при каждом JWT-запросе
 - [x] `GET /api/v1/auth/me` — получение информации о текущем пользователе
+- [x] `GET /api/v1/users` — список с фильтрацией (clubId, role, username) и пагинацией
 
 ### Clubs
 - [x] CRUD клубов
-- [x] Загрузка/получение логотипов
+- [x] Загрузка/получение логотипов (публичный GET)
 - [x] Пагинация списка
 - [x] Доступ: ADMIN (создание/редактирование), METHODIST (просмотр)
 
@@ -37,13 +38,14 @@
 - [x] CRUD упражнений
 - [x] Поле type: ExerciseType enum (ICE/LAND)
 - [x] Поля url (ссылка) и content (текст методики)
-- [x] Фильтрация по типу в списке (опциональный параметр)
+- [x] Поля trainingPart (TrainingPart enum), focuses (Set<Focus>), preparationType (PreparationType enum)
+- [x] Фильтрация по type, trainingPart, focus, preparationType
 - [x] Загрузка/получение картинок (EXERCISE_PICTURE)
 - [x] Привязка инвентаря (many-to-many через ExerciseInventory)
 - [x] Глобальная уникальность названий
 - [x] Правила видимости: админы/методисты — всё, остальные — общие + свой клуб
 - [x] Деактивация вместо удаления (active field)
-- [x] Public endpoint `GET /api/v1/exercises/types` — динамический список типов
+- [x] Enum endpoints: /types, /training-parts, /focuses, /preparation-types
 
 ### Children
 - [x] CRUD детей (вложены в команды: `/api/v1/teams/{teamId}/children`) — 5 эндпоинтов
@@ -72,10 +74,18 @@
 
 ### TrainingExercises
 - [x] Упражнения в тренировке (вложены: `/api/v1/trainings/{trainingId}/exercises`) — 4 эндпоинта
-- [x] Intensity enum (HIGH, MEDIUM, LOW)
+- [x] Intensity enum (MAXIMUM, SUBMAXIMUM, HIGH, MEDIUM, LOW)
 - [x] LoadLevel enum (MAXIMUM, SUBMAXIMUM, HIGH, MEDIUM, LOW)
-- [x] WorkMode enum (INTERVAL, REPEATED, UNIFORM, ALTERNATING)
-- [x] Авто-расчёт restDuration, workMode, totalTime через @PrePersist/@PreUpdate
+- [x] WorkMode enum (ANAEROBIC_ALACTIC, ANAEROBIC_MIXED, ANAEROBIC_LACTIC, AEROBIC, AEROBIC_RECOVERY)
+- [x] Поле repetitions (int)
+- [x] Расчёт restDuration, workMode, totalTime через ExerciseCalculator
+- [x] Калькуляционные ручки: GET /calculator/rest-and-mode, GET /calculator/total-time
+
+### Sets (новый агрегат)
+- [x] CRUD сетов (`/api/v1/sets`) — 5 эндпоинтов
+- [x] Поля: name, trainingPart (TrainingPart enum), club (опционально)
+- [x] Упражнения в сете: POST/GET/DELETE `/api/v1/sets/{id}/exercises`
+- [x] Расчёт параметров через ExerciseCalculator
 
 ### TemplateTrainings
 - [x] CRUD эталонных тренировок (`/api/v1/template-trainings`) — 6 эндпоинтов
@@ -83,7 +93,8 @@
 - [x] Копирование задач, установка sourceTemplate
 
 ### TemplateTrainingExercises
-- [x] Entity с авто-расчётом (аналогично TrainingExercise)
+- [x] Entity с параметрами (аналогично TrainingExercise)
+- [x] Расчёт через ExerciseCalculator
 - [x] Методы управления в TemplateTrainingService
 
 ### TrainingPrograms
@@ -92,6 +103,10 @@
 - [x] Фильтрация по birthYear, loadLevel, cycle
 - [x] Привязка к клубу (опционально)
 
+### ExerciseCalculator (утилитный сервис)
+- [x] CalcResult calculateRestAndMode(workDuration, intensity)
+- [x] int calculateTotalTime(workDuration, restDuration, repetitions, explanationDuration)
+
 ### Storage
 - [x] FileStorage интерфейс + LocalFileStorage реализация
 - [x] FileType enum: CLUB_LOGO, USER_AVATAR, TEAM_LOGO, EXERCISE_PICTURE
@@ -99,13 +114,13 @@
 ### Testing
 - [x] Юнит-тесты для всех сервисов (Mockito)
 - [x] 100+ тестов, все проходят (BUILD SUCCESSFUL)
-- [x] multipart.max-file-size увеличен до 500KB
 
 ## Что осталось сделать
 
 ### High Priority
-- [ ] Написать тесты для новых модулей (ChildServiceTest, StandardServiceTest, TrainingServiceTest, TrainingExercise авто-расчёт)
-- [ ] Создать HTTP-файлы для новых эндпоинтов (http/children.http, http/standards.http, http/trainings.http, http/template-trainings.http, http/training-programs.http)
+- [ ] Написать тесты для ExerciseCalculator, SetService
+- [ ] Создать HTTP-файлы для новых эндпоинтов (http/sets.http)
+- [ ] Создать HTTP-файлы для остальных новых эндпоинтов (http/children.http, http/standards.http, http/trainings.http, http/template-trainings.http, http/training-programs.http)
 - [ ] Обновить Postman-коллекцию для новых эндпоинтов
 - [ ] Обновить `cline/context.md` — полное описание новых модулей
 
@@ -126,12 +141,14 @@
 ## Известные проблемы
 - Нет обработки ошибок для больших файлов (400 вместо 413)
 - TeamService.getTeamsByClub для тренеров использует `Specification` с `in` clause — может быть медленным на больших объёмах
-- TrainingExerciseController работает напрямую с репозиториями (не через сервис) — рефакторинг при написании тестов
 
 ## Эволюция решений
 1. **Было**: Логотипы как Base64 в БД → **Стало**: FileStorage с локальной ФС
 2. **Было**: DELETE для удаления → **Стало**: active field + PATCH
 3. **Было**: Кастомные @Query для всех фильтров → **Стало**: JpaSpecificationExecutor для Exercise (гибкость)
 4. **Было**: Хардкод `List.of(ExerciseType.ICE.name(), ExerciseType.LAND.name())` → **Стало**: `Arrays.stream(ExerciseType.values())`
-5. **Было**: 5 модулей (auth, club, team, inventory, exercise) → **Стало**: 10 модулей (+ child, standard, training + 3 доп. эндпоинта в существующих)
+5. **Было**: 5 модулей (auth, club, team, inventory, exercise) → **Стало**: 10+ модулей (+ child, standard, training, sets)
 6. **Было**: JwtAuthenticationFilter без отслеживания активности → **Стало**: обновление lastSeenAt при каждом запросе
+7. **Было**: Расчёт в @PrePersist/@PreUpdate entity → **Стало**: ExerciseCalculator @Service, вызывается из сервисов
+8. **Было**: 3 значения Intensity (HIGH/MEDIUM/LOW) → **Стало**: 5 (MAXIMUM/SUBMAXIMUM/HIGH/MEDIUM/LOW)
+9. **Было**: WorkMode INTERVAL/REPEATED/UNIFORM/ALTERNATING → **Стало**: ANAEROBIC_*/AEROBIC_* (5 режимов)

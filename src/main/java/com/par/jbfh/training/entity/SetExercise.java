@@ -12,19 +12,19 @@ import lombok.Setter;
 import java.util.UUID;
 
 @Entity
-@Table(name = "training_exercises")
+@Table(name = "set_exercises")
 @Getter
 @Setter
 @NoArgsConstructor
-public class TrainingExercise {
+public class SetExercise {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "training_id", nullable = false)
-    private Training training;
+    @JoinColumn(name = "set_id", nullable = false)
+    private Set set;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "exercise_id", nullable = false)

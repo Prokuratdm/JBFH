@@ -56,15 +56,4 @@ public class TemplateTrainingExercise {
 
     @Column(nullable = false)
     private int repetitions = 1;
-
-    @PrePersist
-    @PreUpdate
-    protected void calculate() {
-        var calc = TrainingExercise.CalculationResult.calculate(this.workDuration, this.intensity);
-        this.restDuration = calc.restDuration();
-        this.workMode = calc.workMode();
-
-        int expl = this.explanationDuration != null ? this.explanationDuration : 0;
-        this.totalTime = this.repetitions * (this.workDuration + this.restDuration) + expl;
-    }
 }

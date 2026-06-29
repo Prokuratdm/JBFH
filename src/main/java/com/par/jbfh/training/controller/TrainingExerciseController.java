@@ -8,6 +8,8 @@ import com.par.jbfh.training.repository.TrainingExerciseRepository;
 import com.par.jbfh.training.repository.TrainingRepository;
 import com.par.jbfh.exercise.entity.Exercise;
 import com.par.jbfh.exercise.repository.ExerciseRepository;
+import com.par.jbfh.training.enums.Intensity;
+import com.par.jbfh.training.service.ExerciseCalculator;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -28,6 +30,7 @@ public class TrainingExerciseController {
     private final TrainingExerciseRepository trainingExerciseRepository;
     private final TrainingRepository trainingRepository;
     private final ExerciseRepository exerciseRepository;
+    private final ExerciseCalculator exerciseCalculator;
 
     @PostMapping("/api/v1/trainings/{trainingId}/exercises")
     @Secured({"ROLE_CLUB", "ROLE_COACH", "ROLE_MAIN_COACH"})
@@ -48,6 +51,13 @@ public class TrainingExerciseController {
         te.setExplanationDuration(request.getExplanationDuration());
         te.setLoadLevel(request.getLoadLevel());
         te.setRepetitions(request.getRepetitions());
+
+        var calc = exerciseCalculator.calculateRestAndMode(te.getWorkDuration(), te.getIntensity());
+        te.setRestDuration(calc.restDuration());
+        te.setWorkMode(calc.workMode());
+        te.setTotalTime(exerciseCalculator.calculateTotalTime(
+                te.getWorkDuration(), te.getRestDuration(),
+                te.getRepetitions(), te.getExplanationDuration()));
 
         te = trainingExerciseRepository.save(te);
         return toResponse(te);
@@ -79,6 +89,13 @@ public class TrainingExerciseController {
         te.setLoadLevel(request.getLoadLevel());
         te.setRepetitions(request.getRepetitions());
 
+        var calc = exerciseCalculator.calculateRestAndMode(te.getWorkDuration(), te.getIntensity());
+        te.setRestDuration(calc.restDuration());
+        te.setWorkMode(calc.workMode());
+        te.setTotalTime(exerciseCalculator.calculateTotalTime(
+                te.getWorkDuration(), te.getRestDuration(),
+                te.getRepetitions(), te.getExplanationDuration()));
+
         te = trainingExerciseRepository.save(te);
         return toResponse(te);
     }
@@ -101,8 +118,8 @@ public class TrainingExerciseController {
             description = "Calculate restDuration and workMode from workDuration and intensity. Does not save any data.")
     public Map<String, Object> calculateRestAndMode(
             @RequestParam int workDuration,
-            @RequestParam com.par.jbfh.training.enums.Intensity intensity) {
-        var calc = TrainingExercise.CalculationResult.calculate(workDuration, intensity);
+            @RequestParam Intensity intensity) {
+        var calc = exerciseCalculator.calculateRestAndMode(workDuration, intensity);
         return Map.of(
                 "restDuration", calc.restDuration(),
                 "workMode", calc.workMode().name()
@@ -114,21 +131,17 @@ public class TrainingExerciseController {
             description = "Calculate totalTime, restDuration and workMode from all inputs. Does not save any data.")
     public Map<String, Object> calculateTotalTime(
             @RequestParam int workDuration,
-            @RequestParam com.par.jbfh.training.enums.Intensity intensity,
+            @RequestParam Intensity intensity,
             @RequestParam(defaultValue = "1") int repetitions,
             @RequestParam(required = false) Integer explanationDuration) {
-        var calc = TrainingExercise.CalculationResult.calculate(workDuration, intensity);
-        int expl = explanationDuration != null ? explanationDuration : 0;
-        int reps = repetitions > 0 ? repetitions : 1;
-        int totalTime = reps * (workDuration + calc.restDuration()) + expl;
+        var calc = exerciseCalculator.calculateRestAndMode(workDuration, intensity);
+        int totalTime = exerciseCalculator.calculateTotalTime(workDuration, calc.restDuration(), repetitions, explanationDuration);
         return Map.of(
                 "totalTime", totalTime,
                 "restDuration", calc.restDuration(),
                 "workMode", calc.workMode().name()
         );
     }
-
-    // ---- private helpers ----
 
     private TrainingExerciseResponse toResponse(TrainingExercise te) {
         return new TrainingExerciseResponse(
